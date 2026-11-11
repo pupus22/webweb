@@ -75,7 +75,7 @@ export default function PrintModal({ sale, onClose }) {
                 {docType === 'invoice' ? 'NOTA PENJUALAN' : 'SURAT JALAN (DO)'}
               </span>
               <p className="text-sm font-bold font-mono text-slate-900 mt-1">
-                {docType === 'invoice' ? sale.invoiceNo : sale.doNo}
+                {sale.orderNo || (docType === 'invoice' ? sale.invoiceNo : sale.doNo)}
               </p>
               <p className="text-xs text-slate-600">Tanggal: {formatDate(sale.date)}</p>
             </div>
@@ -91,11 +91,11 @@ export default function PrintModal({ sale, onClose }) {
             </div>
             <div className="text-right">
               <span className="text-slate-500 font-bold uppercase block text-2xs mb-1">Detail Ekspedisi / Armada:</span>
-              <p className="text-slate-700">Driver / Sopir: <strong className="text-slate-900">{sale.driverName || '-'}</strong></p>
-              <p className="text-slate-700 font-mono">No. Polisi Truk: <strong className="text-slate-900">{sale.vehicleNo || '-'}</strong></p>
+              <p className="text-slate-700">Driver / Sopir: <strong className="text-slate-900">{sale.driverName || 'Armada Pabrik'}</strong></p>
+              <p className="text-slate-700 font-mono">No. Polisi Truk: <strong className="text-slate-900">{sale.truckPlate || sale.vehicleNo || '-'}</strong></p>
               {docType === 'invoice' && (
                 <p className="text-slate-700 mt-1">
-                  Status Pembayaran: <strong className="uppercase">{sale.paymentStatus}</strong>
+                  Status Pembayaran: <strong className="uppercase">{sale.paymentStatus || 'Lunas'}</strong>
                 </p>
               )}
             </div>
@@ -122,10 +122,12 @@ export default function PrintModal({ sale, onClose }) {
               <tbody className="divide-y divide-slate-200 font-sans">
                 <tr>
                   <td className="py-3 px-2 text-center text-slate-500">1</td>
-                  <td className="py-3 px-3 font-mono font-bold text-slate-900">{sale.batchNo}</td>
+                  <td className="py-3 px-3 font-mono font-bold text-slate-900">
+                    {sale.targetLotNo || sale.batchNo || '-'}
+                  </td>
                   <td className="py-3 px-3">
-                    <div className="font-bold text-slate-900">{sale.productName}</div>
-                    <div className="text-2xs text-slate-500">{sale.notes || 'Kemasan karung zak tertutup rapi'}</div>
+                    <div className="font-bold text-slate-900">{sale.productName || 'Biji Pelet Plastik Compounding'}</div>
+                    <div className="text-2xs text-slate-500">{sale.notes || 'Kemasan karung zak tertutup rapi - Lulus QC'}</div>
                   </td>
                   <td className="py-3 px-3 text-right font-mono text-slate-700">
                     {sale.bagCount || Math.floor(sale.qtyKg / 25)} Sak @ 25 Kg

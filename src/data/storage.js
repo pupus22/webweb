@@ -1,26 +1,28 @@
 import {
-  INITIAL_PLASTIC_TYPES,
-  INITIAL_PLASTIC_FORMS,
+  INITIAL_POLYMERS,
+  INITIAL_ADDITIVES,
   INITIAL_CONTACTS,
-  INITIAL_COST_COMPONENTS,
-  INITIAL_PURCHASES,
-  INITIAL_PRODUCTIONS,
+  INITIAL_COST_TARIFFS,
+  INITIAL_RAW_PURCHASES,
+  INITIAL_PRE_PROCESSINGS,
+  INITIAL_PRODUCTION_SPKS,
   INITIAL_STOCK_ADJUSTMENTS,
-  INITIAL_SALES
+  INITIAL_SALES_ORDERS
 } from './defaultData';
 
-const STORAGE_KEY = 'POLYCOMP_ERP_DATABASE_V1';
+const STORAGE_KEY = 'POLYCOMP_ERP_DATABASE_V2';
 
 export function getInitialDatabase() {
   return {
-    plasticTypes: INITIAL_PLASTIC_TYPES,
-    plasticForms: INITIAL_PLASTIC_FORMS,
+    polymers: INITIAL_POLYMERS,
+    additives: INITIAL_ADDITIVES,
     contacts: INITIAL_CONTACTS,
-    costComponents: INITIAL_COST_COMPONENTS,
-    purchases: INITIAL_PURCHASES,
-    productions: INITIAL_PRODUCTIONS,
+    costTariffs: INITIAL_COST_TARIFFS,
+    rawPurchases: INITIAL_RAW_PURCHASES,
+    preProcessings: INITIAL_PRE_PROCESSINGS,
+    productionSPKs: INITIAL_PRODUCTION_SPKS,
     stockAdjustments: INITIAL_STOCK_ADJUSTMENTS,
-    sales: INITIAL_SALES
+    salesOrders: INITIAL_SALES_ORDERS
   };
 }
 
@@ -34,17 +36,18 @@ export function loadDatabase() {
     }
     const parsed = JSON.parse(raw);
     return {
-      plasticTypes: parsed.plasticTypes || INITIAL_PLASTIC_TYPES,
-      plasticForms: parsed.plasticForms || INITIAL_PLASTIC_FORMS,
+      polymers: parsed.polymers || INITIAL_POLYMERS,
+      additives: parsed.additives || INITIAL_ADDITIVES,
       contacts: parsed.contacts || INITIAL_CONTACTS,
-      costComponents: parsed.costComponents || INITIAL_COST_COMPONENTS,
-      purchases: parsed.purchases || [],
-      productions: parsed.productions || [],
+      costTariffs: parsed.costTariffs || INITIAL_COST_TARIFFS,
+      rawPurchases: parsed.rawPurchases || [],
+      preProcessings: parsed.preProcessings || [],
+      productionSPKs: parsed.productionSPKs || [],
       stockAdjustments: parsed.stockAdjustments || [],
-      sales: parsed.sales || []
+      salesOrders: parsed.salesOrders || []
     };
   } catch (err) {
-    console.error('Failed to load database from localStorage:', err);
+    console.error('Failed to parse database from localStorage:', err);
     return getInitialDatabase();
   }
 }
@@ -64,7 +67,7 @@ export function exportBackupJSON(data) {
   const dateStr = new Date().toISOString().slice(0, 10);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `PolyComp_ERP_Backup_${dateStr}.json`;
+  a.download = `PolyComp_ERP_EndToEnd_Backup_${dateStr}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -77,8 +80,8 @@ export function importBackupJSON(file) {
     reader.onload = (e) => {
       try {
         const parsed = JSON.parse(e.target.result);
-        if (!parsed.purchases && !parsed.plasticTypes) {
-          throw new Error('Format file backup tidak valid.');
+        if (!parsed.rawPurchases && !parsed.polymers) {
+          throw new Error('Format file backup ERP tidak valid.');
         }
         resolve(parsed);
       } catch (err) {

@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
-import PurchasesModule from './components/PurchasesModule';
-import ProductionModule from './components/ProductionModule';
-import InventoryModule from './components/InventoryModule';
-import SalesModule from './components/SalesModule';
+import Stage1PurchasesModule from './components/Stage1PurchasesModule';
+import Stage2PreProcessingModule from './components/Stage2PreProcessingModule';
+import Stage3ProductionModule from './components/Stage3ProductionModule';
+import Stage4InventoryModule from './components/Stage4InventoryModule';
+import Stage5SalesModule from './components/Stage5SalesModule';
 import MasterDataModule from './components/MasterDataModule';
+import PrintModal from './components/PrintModal';
 import ConfirmModal from './components/ConfirmModal';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import {
   loadDatabase,
@@ -15,11 +19,15 @@ import {
   exportBackupJSON,
   importBackupJSON
 } from './data/storage';
-import { recalculateAll } from './utils/calculations';
+import { recalculateERP } from './utils/calculations';
 
 export default function App() {
   const [database, setDatabase] = useState(() => loadDatabase());
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const [printOrder, setPrintOrder] = useState(null);
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     title: '',
@@ -35,87 +43,97 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Save to LocalStorage whenever database changes
+  // Persist to LocalStorage whenever database state updates
   useEffect(() => {
     saveDatabase(database);
   }, [database]);
 
-  // Dynamic automatic recalculation & recalibration engine
+  // Master 5-Stage Cascading Recalibration Engine
   const {
-    recalibratedPurchases,
-    recalibratedProductions,
-    finishedGoodsInventory,
-    recalibratedSales,
+    recalibratedRawPurchases,
+    recalibratedPreProcessings,
+    recalibratedProductionSPKs,
+    finishedGoodsPelletInventory,
+    recalibratedSalesOrders,
     kpis
-  } = useMemo(() => recalculateAll(database), [database]);
+  } = useMemo(() => recalculateERP(database), [database]);
 
   // Setters for each sub-collection
-  const setPlasticTypes = (updater) => {
+  const setPolymers = (updater) => {
     setDatabase(prev => ({
       ...prev,
-      plasticTypes: typeof updater === 'function' ? updater(prev.plasticTypes) : updater
+      polymers: typeof updater === 'function' ? updater(prev.polymers || []) : updater
     }));
   };
 
-  const setPlasticForms = (updater) => {
+  const setAdditives = (updater) => {
     setDatabase(prev => ({
       ...prev,
-      plasticForms: typeof updater === 'function' ? updater(prev.plasticForms) : updater
+      additives: typeof updater === 'function' ? updater(prev.additives || []) : updater
     }));
   };
 
   const setContacts = (updater) => {
     setDatabase(prev => ({
       ...prev,
-      contacts: typeof updater === 'function' ? updater(prev.contacts) : updater
+      contacts: typeof updater === 'function' ? updater(prev.contacts || []) : updater
     }));
   };
 
-  const setCostComponents = (updater) => {
+  const setCostTariffs = (updater) => {
     setDatabase(prev => ({
       ...prev,
-      costComponents: typeof updater === 'function' ? updater(prev.costComponents) : updater
+      costTariffs: typeof updater === 'function' ? updater(prev.costTariffs || {}) : updater
     }));
+    showToast('Tarif biaya operasional pabrik diperbarui');
   };
 
-  const setPurchases = (updater) => {
+  const setRawPurchases = (updater) => {
     setDatabase(prev => ({
       ...prev,
-      purchases: typeof updater === 'function' ? updater(prev.purchases) : updater
+      rawPurchases: typeof updater === 'function' ? updater(prev.rawPurchases || []) : updater
     }));
-    showToast('Data Pembelian diperbarui & Stok/HPP ter-rekalibrasi');
+    showToast('Pembelian limbah reject diperbarui & HPP ter-rekalibrasi');
   };
 
-  const setProductions = (updater) => {
+  const setPreProcessings = (updater) => {
     setDatabase(prev => ({
       ...prev,
-      productions: typeof updater === 'function' ? updater(prev.productions) : updater
+      preProcessings: typeof updater === 'function' ? updater(prev.preProcessings || []) : updater
     }));
-    showToast('SPK Produksi diperbarui & Gudang Pelet ter-rekalibrasi');
+    showToast('Data sortasi/giling/cuci flakes diperbarui');
+  };
+
+  const setProductionSPKs = (updater) => {
+    setDatabase(prev => ({
+      ...prev,
+      productionSPKs: typeof updater === 'function' ? updater(prev.productionSPKs || []) : updater
+    }));
+    showToast('SPK Blending & Ekstrusi pelet diperbarui');
   };
 
   const setStockAdjustments = (updater) => {
     setDatabase(prev => ({
       ...prev,
-      stockAdjustments: typeof updater === 'function' ? updater(prev.stockAdjustments) : updater
+      stockAdjustments: typeof updater === 'function' ? updater(prev.stockAdjustments || []) : updater
     }));
-    showToast('Penyesuaian Opname berhasil disimpan');
+    showToast('Catatan Stock Opname berhasil disimpan');
   };
 
-  const setSales = (updater) => {
+  const setSalesOrders = (updater) => {
     setDatabase(prev => ({
       ...prev,
-      sales: typeof updater === 'function' ? updater(prev.sales) : updater
+      salesOrders: typeof updater === 'function' ? updater(prev.salesOrders || []) : updater
     }));
-    showToast('Data Penjualan berhasil disimpan');
+    showToast('Transaksi Penjualan & Surat Jalan berhasil disimpan');
   };
 
-  // Reset to Demo Data
+  // Reset Demo Factory Data
   const handleResetDemo = () => {
     setConfirmModal({
       isOpen: true,
       title: 'Reset Demo Data Simulasi Pabrik',
-      message: 'Apakah Anda yakin ingin mengembalikan seluruh data ke simulasi pabrik awal? Semua input data saat ini akan ditimpa dengan data demo.',
+      message: 'Apakah Anda yakin ingin mereset seluruh database ke simulasi pabrik awal? Semua riwayat transaksi akan ditimpa dengan data default pabrik compounding.',
       confirmVariant: 'danger',
       onConfirm: () => {
         const initial = getInitialDatabase();
@@ -126,13 +144,12 @@ export default function App() {
     });
   };
 
-  // Export JSON Backup
+  // Export & Import Backup JSON
   const handleExportBackup = () => {
     exportBackupJSON(database);
     showToast('File backup JSON berhasil diunduh!');
   };
 
-  // Import JSON Backup
   const handleImportBackup = async (file) => {
     try {
       const imported = await importBackupJSON(file);
@@ -144,126 +161,174 @@ export default function App() {
     }
   };
 
+  // Counts for sidebar badges
+  const sidebarCounts = {
+    rawPurchases: recalibratedRawPurchases.length,
+    preProcessings: recalibratedPreProcessings.length,
+    productionSPKs: recalibratedProductionSPKs.length,
+    finishedGoods: finishedGoodsPelletInventory.length,
+    salesOrders: recalibratedSalesOrders.length
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <div className="bg-emerald-600 text-white font-medium px-4 py-2 rounded-lg shadow-xl text-xs flex items-center space-x-2 border border-emerald-400/40">
-            <span>✓</span>
-            <span>{toast.message}</span>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-purple-600 selection:text-white">
+        {/* Toast Notification */}
+        {toast && (
+          <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="bg-emerald-600 text-white font-medium px-4 py-2 rounded-lg shadow-xl text-xs flex items-center space-x-2 border border-emerald-400/40">
+              <span>✓</span>
+              <span>{toast.message}</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Navigation */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onResetDemo={handleResetDemo}
-        onExport={handleExportBackup}
-        onImport={handleImportBackup}
-      />
+        {/* Global Navbar */}
+        <Navbar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onResetDemo={handleResetDemo}
+          onExport={handleExportBackup}
+          onImport={handleImportBackup}
+          onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+        />
 
-      {/* Body Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4">
-        {activeTab === 'dashboard' && (
-          <Dashboard
-            kpis={kpis}
-            recalibratedPurchases={recalibratedPurchases}
-            recalibratedProductions={recalibratedProductions}
-            finishedGoodsInventory={finishedGoodsInventory}
-            recalibratedSales={recalibratedSales}
+        {/* Main Layout Container (Sidebar + Content Area) */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Responsive Sidebar */}
+          <Sidebar
+            activeTab={activeTab}
             setActiveTab={setActiveTab}
+            isCollapsed={sidebarCollapsed}
+            setIsCollapsed={setSidebarCollapsed}
+            mobileOpen={mobileSidebarOpen}
+            setMobileOpen={setMobileSidebarOpen}
+            counts={sidebarCounts}
           />
-        )}
 
-        {activeTab === 'purchases' && (
-          <PurchasesModule
-            recalibratedPurchases={recalibratedPurchases}
-            setPurchases={setPurchases}
-            plasticTypes={database.plasticTypes}
-            plasticForms={database.plasticForms}
-            contacts={database.contacts}
-            onRequestDelete={setConfirmModal}
-          />
-        )}
+          {/* Scrollable Main Content Body */}
+          <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5 max-w-7xl w-full mx-auto space-y-4">
+            {activeTab === 'dashboard' && (
+              <Dashboard
+                kpis={kpis}
+                recalibratedRawPurchases={recalibratedRawPurchases}
+                recalibratedPreProcessings={recalibratedPreProcessings}
+                recalibratedProductionSPKs={recalibratedProductionSPKs}
+                finishedGoodsPelletInventory={finishedGoodsPelletInventory}
+                recalibratedSalesOrders={recalibratedSalesOrders}
+                setActiveTab={setActiveTab}
+              />
+            )}
 
-        {activeTab === 'production' && (
-          <ProductionModule
-            recalibratedProductions={recalibratedProductions}
-            setProductions={setProductions}
-            recalibratedPurchases={recalibratedPurchases}
-            plasticTypes={database.plasticTypes}
-            costComponents={database.costComponents}
-            onRequestDelete={setConfirmModal}
-          />
-        )}
+            {activeTab === 'stage1' && (
+              <Stage1PurchasesModule
+                recalibratedRawPurchases={recalibratedRawPurchases}
+                setRawPurchases={setRawPurchases}
+                polymers={database.polymers || []}
+                contacts={database.contacts || []}
+                onRequestDelete={setConfirmModal}
+              />
+            )}
 
-        {activeTab === 'inventory' && (
-          <InventoryModule
-            finishedGoodsInventory={finishedGoodsInventory}
-            recalibratedPurchases={recalibratedPurchases}
-            stockAdjustments={database.stockAdjustments}
-            setStockAdjustments={setStockAdjustments}
-            onRequestDelete={setConfirmModal}
-          />
-        )}
+            {activeTab === 'stage2' && (
+              <Stage2PreProcessingModule
+                recalibratedPreProcessings={recalibratedPreProcessings}
+                setPreProcessings={setPreProcessings}
+                recalibratedRawPurchases={recalibratedRawPurchases}
+                costTariffs={database.costTariffs || {}}
+                onRequestDelete={setConfirmModal}
+              />
+            )}
 
-        {activeTab === 'sales' && (
-          <SalesModule
-            recalibratedSales={recalibratedSales}
-            setSales={setSales}
-            finishedGoodsInventory={finishedGoodsInventory}
-            contacts={database.contacts}
-            onRequestDelete={setConfirmModal}
-          />
-        )}
+            {activeTab === 'stage3' && (
+              <Stage3ProductionModule
+                recalibratedProductionSPKs={recalibratedProductionSPKs}
+                setProductionSPKs={setProductionSPKs}
+                recalibratedPreProcessings={recalibratedPreProcessings}
+                additives={database.additives || []}
+                costTariffs={database.costTariffs || {}}
+                onRequestDelete={setConfirmModal}
+              />
+            )}
 
-        {activeTab === 'master' && (
-          <MasterDataModule
-            plasticTypes={database.plasticTypes}
-            setPlasticTypes={setPlasticTypes}
-            plasticForms={database.plasticForms}
-            setPlasticForms={setPlasticForms}
-            contacts={database.contacts}
-            setContacts={setContacts}
-            costComponents={database.costComponents}
-            setCostComponents={setCostComponents}
-            onRequestDelete={setConfirmModal}
-          />
-        )}
-      </main>
+            {activeTab === 'stage4' && (
+              <Stage4InventoryModule
+                finishedGoodsPelletInventory={finishedGoodsPelletInventory}
+                recalibratedPreProcessings={recalibratedPreProcessings}
+                stockAdjustments={database.stockAdjustments || []}
+                setStockAdjustments={setStockAdjustments}
+                setProductionSPKs={setProductionSPKs}
+                onRequestDelete={setConfirmModal}
+              />
+            )}
 
-      {/* Footer Status Bar (High-density ERP footer) */}
-      <footer className="no-print bg-slate-900 border-t border-slate-800 text-slate-500 text-2xs py-2 px-4 mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1">
-          <div className="flex items-center space-x-3">
-            <span className="font-semibold text-slate-400">PolyComp ERP v1.0</span>
-            <span>•</span>
-            <span>Plastics Recycling, Sorting & Compounding Management System</span>
-          </div>
-          <div className="flex items-center space-x-3 font-mono">
-            <span>Bahan Baku: {recalibratedPurchases.length} Batches</span>
-            <span>•</span>
-            <span>SPK: {recalibratedProductions.length}</span>
-            <span>•</span>
-            <span>Gudang Pelet: {finishedGoodsInventory.length}</span>
-            <span>•</span>
-            <span>Pesanan: {recalibratedSales.length}</span>
-          </div>
+            {activeTab === 'stage5' && (
+              <Stage5SalesModule
+                recalibratedSalesOrders={recalibratedSalesOrders}
+                setSalesOrders={setSalesOrders}
+                finishedGoodsPelletInventory={finishedGoodsPelletInventory}
+                contacts={database.contacts || []}
+                onPrintOrder={(order) => setPrintOrder(order)}
+                onRequestDelete={setConfirmModal}
+              />
+            )}
+
+            {activeTab === 'master' && (
+              <MasterDataModule
+                polymers={database.polymers || []}
+                setPolymers={setPolymers}
+                additives={database.additives || []}
+                setAdditives={setAdditives}
+                contacts={database.contacts || []}
+                setContacts={setContacts}
+                costTariffs={database.costTariffs || {}}
+                setCostTariffs={setCostTariffs}
+                onRequestDelete={setConfirmModal}
+              />
+            )}
+          </main>
         </div>
-      </footer>
 
-      {/* Global Confirmation Modal */}
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        confirmVariant={confirmModal.confirmVariant}
-        onConfirm={confirmModal.onConfirm}
-        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-      />
-    </div>
+        {/* High-Density Footer Status Bar */}
+        <footer className="no-print bg-slate-900 border-t border-slate-800 text-slate-500 text-2xs py-2 px-4 shrink-0">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1">
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold text-slate-400">PolyComp ERP v2.0</span>
+              <span>•</span>
+              <span>Plastics Recycling, Washing, Compounding & Pellets Manufacturing</span>
+            </div>
+            <div className="flex items-center space-x-2.5 font-mono">
+              <span>Reject: {recalibratedRawPurchases.length}</span>
+              <span>•</span>
+              <span>Flakes: {recalibratedPreProcessings.length}</span>
+              <span>•</span>
+              <span>SPK Pelet: {recalibratedProductionSPKs.length}</span>
+              <span>•</span>
+              <span>Gudang Sak: {finishedGoodsPelletInventory.reduce((a, b) => a + (b.availableBags || 0), 0)} Sak</span>
+              <span>•</span>
+              <span>Surat Jalan: {recalibratedSalesOrders.length}</span>
+            </div>
+          </div>
+        </footer>
+
+        {/* Global Print Modal */}
+        {printOrder && (
+          <PrintModal
+            sale={printOrder}
+            onClose={() => setPrintOrder(null)}
+          />
+        )}
+
+        {/* Global Confirmation Modal */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmVariant={confirmModal.confirmVariant}
+          onConfirm={confirmModal.onConfirm}
+          onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        />
+      </div>
+    </ErrorBoundary>
   );
 }

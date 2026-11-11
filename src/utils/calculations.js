@@ -1,258 +1,363 @@
 /**
- * Core recalculation engine for PolyComp ERP.
- * Dynamically re-evaluates raw material inventory, batch HPP, finished goods stock,
- * and sales gross profit whenever any historical transaction is created or edited.
+ * Multi-Stage End-to-End Recalibration Engine for PolyComp ERP.
+ * Cascades price & weight edits from Raw Purchases -> Flakes Pre-Processing -> Blending/Extrusion -> FG Pellets -> Sales.
  */
 
-export function recalculateAll(database) {
+export function recalculateERP(database) {
   const {
-    purchases = [],
-    productions = [],
+    polymers = [],
+    additives = [],
+    contacts = [],
+    costTariffs = { preProcessingRatePerKg: 1250, extrusionRatePerKg: 1850 },
+    rawPurchases = [],
+    preProcessings = [],
+    productionSPKs = [],
     stockAdjustments = [],
-    sales = [],
-    plasticTypes = [],
-    contacts = []
+    salesOrders = []
   } = database;
 
-  // 1. Create lookup maps
-  const purchaseMap = new Map();
-  purchases.forEach(p => purchaseMap.set(p.id, p));
-
-  const plasticTypeMap = new Map();
-  plasticTypes.forEach(pt => plasticTypeMap.set(pt.id, pt));
+  // 1. Dictionaries for fast lookup
+  const polymerMap = new Map();
+  polymers.forEach(p => polymerMap.set(p.id, p));
 
   const contactMap = new Map();
   contacts.forEach(c => contactMap.set(c.id, c));
 
-  // 2. Compute Raw Material usage from Productions
-  const rawUsageMap = new Map(); // purchaseId -> totalKgUsed
-  productions.forEach(prod => {
-    if (Array.isArray(prod.inputs)) {
-      prod.inputs.forEach(inp => {
-        if (inp.purchaseBatchId) {
-          const current = rawUsageMap.get(inp.purchaseBatchId) || 0;
-          rawUsageMap.set(inp.purchaseBatchId, current + Number(inp.weightUsedKg || 0));
-        }
-      });
+  const additiveMap = new Map();
+  additives.forEach(a => additiveMap.set(a.id, a));
+
+  // 2. Compute Raw Material usage in Tahap 2 (Pre-Processing / Giling & Cuci)
+  const rawUsageMap = new Map(); // rawPurchaseId -> totalKgUsed
+  preProcessings.forEach(prc => {
+    if (prc.rawPurchaseId) {
+      const cur = rawUsageMap.get(prc.rawPurchaseId) || 0;
+      rawUsageMap.set(prc.rawPurchaseId, cur + Number(prc.rawUsedKg || 0));
     }
   });
 
-  // 3. Process Raw Purchases with dynamic stock balance & recalibrated totals
-  const recalibratedPurchases = purchases.map(p => {
-    const gross = Number(p.grossWeight || 0);
-    const deductionPct = Number(p.tareOrDeductionPercent || 0);
-    const deductionKg = p.deductionWeight !== undefined && p.deductionWeight !== null
-      ? Number(p.deductionWeight)
-      : (gross * deductionPct / 100);
-    const netWeight = Math.max(0, gross - deductionKg);
-    const pricePerKg = Number(p.pricePerKg || 0);
+  // 3. Tahap 1: Recalibrate Inbound Raw Purchases
+  const recalibratedRawPurchases = rawPurchases.map(r => {
+    const gross = Number(r.grossWeight || 0);
+    const deduction = Number(r.deductionKg || 0);
+    const netWeight = Math.max(0, gross - deduction);
+    const pricePerKg = Number(r.pricePerKg || 0);
     const totalAmount = netWeight * pricePerKg;
 
-    const usedKg = rawUsageMap.get(p.id) || 0;
+    const usedKg = rawUsageMap.get(r.id) || 0;
     const remainingKg = Math.max(0, netWeight - usedKg);
-    const stockStatus = remainingKg <= 0 ? 'Habis' : (remainingKg < netWeight * 0.2 ? 'Menipis' : 'Tersedia');
+    const stockStatus = remainingKg <= 0 ? 'Habis' : (remainingKg < netWeight * 0.25 ? 'Menipis' : 'Tersedia');
 
-    const plastic = plasticTypeMap.get(p.plasticTypeId);
-    const supplier = contactMap.get(p.supplierId);
+    const polymer = polymerMap.get(r.polymerId);
+    const supplier = contactMap.get(r.supplierId);
 
     return {
-      ...p,
+      ...r,
       grossWeight: gross,
-      tareOrDeductionPercent: deductionPct,
-      deductionWeight: deductionKg,
+      deductionKg: deduction,
       netWeight,
       pricePerKg,
       totalAmount,
       usedKg,
       remainingKg,
       stockStatus,
-      plasticName: plastic ? `${plastic.code} - ${plastic.name}` : p.plasticTypeId,
-      supplierName: supplier ? supplier.name : p.supplierId
+      polymerCode: polymer ? polymer.code : 'PLASTIC',
+      polymerName: polymer ? `${polymer.code} - ${polymer.name}` : r.polymerId,
+      supplierName: supplier ? supplier.name : r.supplierId,
+      assetValue: remainingKg * pricePerKg
     };
   });
 
-  // Map for fast recalibrated purchase lookup
-  const recalPurchaseMap = new Map();
-  recalibratedPurchases.forEach(p => recalPurchaseMap.set(p.id, p));
+  const rawPurchaseMap = new Map();
+  recalibratedRawPurchases.forEach(r => rawPurchaseMap.set(r.id, r));
 
-  // 4. Recalibrate Productions (Input costs reflect live purchase prices, HPP recomputed)
-  const recalibratedProductions = productions.map(prod => {
+  // 4. Compute Flakes Usage in Tahap 3 (Blending & Ekstrusi)
+  const flakesUsageMap = new Map(); // preProcessingId -> totalKgUsed
+  productionSPKs.forEach(spk => {
+    if (Array.isArray(spk.ingredients)) {
+      spk.ingredients.forEach(ing => {
+        if (ing.sourceType === 'flakes' && ing.sourceId) {
+          const cur = flakesUsageMap.get(ing.sourceId) || 0;
+          flakesUsageMap.set(ing.sourceId, cur + Number(ing.weightKg || 0));
+        }
+      });
+    }
+  });
+
+  // 5. Tahap 2: Recalibrate Pre-Processing (Sortir, Crushing/Giling, Cuci & Drying)
+  const recalibratedPreProcessings = preProcessings.map(prc => {
+    const matchedRaw = rawPurchaseMap.get(prc.rawPurchaseId);
+    // Live purchase price cascading
+    const liveRawPricePerKg = matchedRaw ? matchedRaw.pricePerKg : Number(prc.rawUnitPrice || 8500);
+    const rawUsedKg = Number(prc.rawUsedKg || 0);
+    const rawMaterialCost = rawUsedKg * liveRawPricePerKg;
+
+    const outputFlakesKg = Number(prc.outputFlakesKg || 0);
+    const ratePerKg = Number(prc.processCostRatePerKg || costTariffs.preProcessingRatePerKg || 1250);
+    const totalProcessCost = outputFlakesKg * ratePerKg;
+    const totalStageCost = rawMaterialCost + totalProcessCost;
+
+    const wasteSortirKg = Math.max(0, rawUsedKg - outputFlakesKg);
+    const wastePercentage = rawUsedKg > 0 ? (wasteSortirKg / rawUsedKg) * 100 : 0;
+    const hppFlakesPerKg = outputFlakesKg > 0 ? (totalStageCost / outputFlakesKg) : 0;
+
+    const usedInExtrusionKg = flakesUsageMap.get(prc.id) || 0;
+    const remainingFlakesKg = Math.max(0, outputFlakesKg - usedInExtrusionKg);
+    const flakesStockStatus = remainingFlakesKg <= 0 ? 'Habis Terolah' : (remainingFlakesKg < 300 ? 'Flakes Menipis' : 'Siap Blending');
+
+    const polymer = polymerMap.get(prc.polymerId) || (matchedRaw ? polymerMap.get(matchedRaw.polymerId) : null);
+
+    return {
+      ...prc,
+      rawUsedKg,
+      rawUnitPrice: liveRawPricePerKg,
+      rawMaterialCost,
+      outputFlakesKg,
+      processCostRatePerKg: ratePerKg,
+      totalProcessCost,
+      totalStageCost,
+      wasteSortirKg,
+      wastePercentage,
+      hppFlakesPerKg,
+      usedInExtrusionKg,
+      remainingFlakesKg,
+      flakesStockStatus,
+      rawBatchNo: matchedRaw ? matchedRaw.batchNo : '-',
+      polymerCode: polymer ? polymer.code : 'PLASTIC',
+      assetValue: remainingFlakesKg * hppFlakesPerKg
+    };
+  });
+
+  const preProcessingMap = new Map();
+  recalibratedPreProcessings.forEach(p => preProcessingMap.set(p.id, p));
+
+  // 6. Tahap 3: Recalibrate Blending & Extrusion SPKs
+  const recalibratedProductionSPKs = productionSPKs.map(spk => {
     let computedInputKg = 0;
     let computedMaterialCost = 0;
 
-    const recalibratedInputs = (prod.inputs || []).map(inp => {
-      const livePurchase = recalPurchaseMap.get(inp.purchaseBatchId);
-      // Auto-recalibrate: Use live purchase price if available, fallback to stored costPerKg
-      const unitCost = livePurchase ? livePurchase.pricePerKg : Number(inp.costPerKg || 0);
-      const weight = Number(inp.weightUsedKg || 0);
-      const subtotal = weight * unitCost;
+    const recalibratedIngredients = (spk.ingredients || []).map(ing => {
+      let liveUnitCost = Number(ing.unitCost || 0);
+      let materialName = ing.materialName || 'Material';
+      let batchCode = ing.batchCode || '';
 
-      computedInputKg += weight;
-      computedMaterialCost += subtotal;
+      if (ing.sourceType === 'flakes') {
+        const matchedFlakes = preProcessingMap.get(ing.sourceId);
+        if (matchedFlakes) {
+          liveUnitCost = matchedFlakes.hppFlakesPerKg;
+          materialName = matchedFlakes.flakesName;
+          batchCode = matchedFlakes.outputFlakesBatchNo;
+        }
+      } else if (ing.sourceType === 'additive') {
+        const matchedAdditive = additiveMap.get(ing.sourceId);
+        if (matchedAdditive) {
+          liveUnitCost = Number(matchedAdditive.unitPrice || ing.unitCost);
+          materialName = matchedAdditive.name;
+          batchCode = matchedAdditive.code;
+        }
+      }
 
-      const pType = plasticTypeMap.get(inp.plasticTypeId) || (livePurchase ? plasticTypeMap.get(livePurchase.plasticTypeId) : null);
+      const weightKg = Number(ing.weightKg || 0);
+      const subtotalCost = weightKg * liveUnitCost;
+
+      computedInputKg += weightKg;
+      computedMaterialCost += subtotalCost;
 
       return {
-        ...inp,
-        costPerKg: unitCost,
-        subtotalCost: subtotal,
-        weightUsedKg: weight,
-        materialName: inp.materialName || (livePurchase ? `${livePurchase.batchNo} (${livePurchase.plasticName})` : 'Bahan Baku'),
-        plasticCode: pType ? pType.code : ''
+        ...ing,
+        materialName,
+        batchCode,
+        weightKg,
+        unitCost: liveUnitCost,
+        subtotalCost
       };
     });
 
-    const totalInputKg = computedInputKg > 0 ? computedInputKg : Number(prod.totalInputKg || 0);
-    const totalMaterialCost = computedMaterialCost > 0 ? computedMaterialCost : Number(prod.totalMaterialCost || 0);
+    const totalInputMixKg = computedInputKg > 0 ? computedInputKg : Number(spk.totalInputMixKg || 0);
+    const totalMaterialCost = computedMaterialCost > 0 ? computedMaterialCost : Number(spk.totalMaterialCost || 0);
 
-    const outputKg = Number(prod.outputKg || 0);
-    const opCostPerKg = Number(prod.operationalCostPerKg || 0);
-    const totalOperationalCost = outputKg * opCostPerKg;
-    const totalProductionCost = totalMaterialCost + totalOperationalCost;
+    const outputPelletKg = Number(spk.outputPelletKg || 0);
+    const extrusionRate = Number(spk.extrusionRatePerKg || costTariffs.extrusionRatePerKg || 1850);
+    const totalExtrusionCost = outputPelletKg * extrusionRate;
+    const totalProductionCost = totalMaterialCost + totalExtrusionCost;
 
-    const shrinkageKg = Math.max(0, totalInputKg - outputKg);
-    const shrinkagePercent = totalInputKg > 0 ? (shrinkageKg / totalInputKg) * 100 : 0;
-    const hppPerKg = outputKg > 0 ? (totalProductionCost / outputKg) : 0;
+    const wasteExtrusionKg = Math.max(0, totalInputMixKg - outputPelletKg);
+    const wastePercentage = totalInputMixKg > 0 ? (wasteExtrusionKg / totalInputMixKg) * 100 : 0;
+    const hppFinalPelletPerKg = outputPelletKg > 0 ? (totalProductionCost / outputPelletKg) : 0;
+    const bagWeight = Number(spk.bagWeightKg || 25);
+    const bagCount = bagWeight > 0 ? Math.floor(outputPelletKg / bagWeight) : 0;
 
     return {
-      ...prod,
-      inputs: recalibratedInputs,
-      totalInputKg,
+      ...spk,
+      ingredients: recalibratedIngredients,
+      totalInputMixKg,
       totalMaterialCost,
-      operationalCostPerKg: opCostPerKg,
-      totalOperationalCost,
+      extrusionRatePerKg: extrusionRate,
+      totalExtrusionCost,
       totalProductionCost,
-      outputKg,
-      shrinkageKg,
-      shrinkagePercent,
-      hppPerKg
+      outputPelletKg,
+      wasteExtrusionKg,
+      wastePercentage,
+      hppFinalPelletPerKg,
+      bagWeightKg: bagWeight,
+      bagCount
     };
   });
 
-  // Map for fast production lookup (by spkNo)
-  const productionBySpk = new Map();
-  recalibratedProductions.forEach(prd => productionBySpk.set(prd.spkNo, prd));
+  const spkByLotMap = new Map();
+  recalibratedProductionSPKs.forEach(spk => {
+    if (spk.targetLotNo) spkByLotMap.set(spk.targetLotNo, spk);
+    spkByLotMap.set(spk.spkNo, spk);
+  });
 
-  // 5. Compute Finished Goods stock usage from Sales & Adjustments
-  const salesByBatch = new Map(); // spkNo -> totalSoldKg
-  sales.forEach(sale => {
-    if (sale.batchNo) {
-      const cur = salesByBatch.get(sale.batchNo) || 0;
-      salesByBatch.set(sale.batchNo, cur + Number(sale.qtyKg || 0));
+  // 7. Tahap 4: Compute FG Pellet Stock Usage from Sales & Opname
+  const salesByLotMap = new Map();
+  salesOrders.forEach(so => {
+    if (so.targetLotNo) {
+      const cur = salesByLotMap.get(so.targetLotNo) || 0;
+      salesByLotMap.set(so.targetLotNo, cur + Number(so.qtyKg || 0));
     }
   });
 
-  const adjustmentsByBatch = new Map(); // spkNo -> totalDeltaKg
+  const adjustmentsByLotMap = new Map();
   stockAdjustments.forEach(adj => {
-    if (adj.batchNo) {
-      const cur = adjustmentsByBatch.get(adj.batchNo) || 0;
-      adjustmentsByBatch.set(adj.batchNo, cur + Number(adj.deltaKg || 0));
+    if (adj.targetLotNo) {
+      const cur = adjustmentsByLotMap.get(adj.targetLotNo) || 0;
+      adjustmentsByLotMap.set(adj.targetLotNo, cur + Number(adj.deltaKg || 0));
     }
   });
 
-  // 6. Build Finished Goods Inventory list
-  const finishedGoodsInventory = recalibratedProductions.map(prod => {
-    const soldKg = salesByBatch.get(prod.spkNo) || 0;
-    const adjustmentKg = adjustmentsByBatch.get(prod.spkNo) || 0;
-    const currentStockKg = Math.max(0, prod.outputKg + adjustmentKg - soldKg);
-    const totalAssetValue = currentStockKg * prod.hppPerKg;
-    const bagCapacity = Number(prod.bagWeightKg || 25);
+  // Build Finished Goods Pellet Inventory List
+  const finishedGoodsPelletInventory = recalibratedProductionSPKs.map(spk => {
+    const lotKey = spk.targetLotNo || spk.spkNo;
+    const soldKg = salesByLotMap.get(lotKey) || 0;
+    const adjustmentKg = adjustmentsByLotMap.get(lotKey) || 0;
+    const currentStockKg = Math.max(0, spk.outputPelletKg + adjustmentKg - soldKg);
+    const totalAssetValue = currentStockKg * spk.hppFinalPelletPerKg;
+    const bagCapacity = Number(spk.bagWeightKg || 25);
     const availableBags = bagCapacity > 0 ? Math.floor(currentStockKg / bagCapacity) : 0;
+    const sisaKg = currentStockKg % bagCapacity;
+
+    const stockStatus = currentStockKg <= 0 ? 'Habis Terjual' : (currentStockKg < 250 ? 'Stok Kritis' : 'Siap Kirim');
 
     return {
-      batchNo: prod.spkNo,
-      productName: prod.targetProductName,
-      targetType: prod.targetType,
-      targetColor: prod.targetColor,
-      productionDate: prod.date,
-      originalOutputKg: prod.outputKg,
+      lotNo: lotKey,
+      spkNo: spk.spkNo,
+      productName: spk.targetProductName,
+      targetColor: spk.targetColor,
+      polymerType: spk.polymerType,
+      qcStatus: spk.qcResult?.status || 'Lulus QC',
+      mfi: spk.qcResult?.mfiTest || '-',
+      productionDate: spk.date,
+      originalOutputKg: spk.outputPelletKg,
       adjustmentKg,
       soldKg,
       currentStockKg,
       availableBags,
+      sisaKg,
       bagWeightKg: bagCapacity,
-      hppPerKg: prod.hppPerKg,
+      hppFinalPelletPerKg: spk.hppFinalPelletPerKg,
       totalAssetValue,
-      status: currentStockKg <= 0 ? 'Habis Terjual' : (currentStockKg < 250 ? 'Stok Rendah' : 'Siap Kirim')
+      stockStatus
     };
   });
 
-  // Map for fast finished goods batch lookup
-  const fgMap = new Map();
-  finishedGoodsInventory.forEach(fg => fgMap.set(fg.batchNo, fg));
+  const fgPelletMap = new Map();
+  finishedGoodsPelletInventory.forEach(fg => fgPelletMap.set(fg.lotNo, fg));
 
-  // 7. Recalibrate Sales (HPP & Profit dynamically tied to production batch)
-  const recalibratedSales = sales.map(s => {
-    const fg = fgMap.get(s.batchNo);
-    const cogsPerKg = fg ? fg.hppPerKg : Number(s.cogsPerKg || 0);
-    const qtyKg = Number(s.qtyKg || 0);
-    const pricePerKg = Number(s.pricePerKg || 0);
-    const discount = Number(s.discount || 0);
-    const shippingCost = Number(s.shippingCost || 0);
+  // 8. Tahap 5: Recalibrate Sales Orders (Margin tied to Live Pellet HPP)
+  const recalibratedSalesOrders = salesOrders.map(so => {
+    const matchedPellet = fgPelletMap.get(so.targetLotNo);
+    const liveCogsPerKg = matchedPellet ? matchedPellet.hppFinalPelletPerKg : Number(so.cogsPerKg || 0);
+
+    const qtyKg = Number(so.qtyKg || 0);
+    const pricePerKg = Number(so.pricePerKg || 0);
+    const discount = Number(so.discount || 0);
+    const shippingCost = Number(so.shippingCost || 0);
 
     const subtotal = qtyKg * pricePerKg;
-    const netRevenue = subtotal - discount;
+    const netRevenue = Math.max(0, subtotal - discount);
     const totalAmount = netRevenue + shippingCost;
-    const totalCogs = qtyKg * cogsPerKg;
+    const totalCogs = qtyKg * liveCogsPerKg;
     const grossProfit = netRevenue - totalCogs;
-    const profitMarginPercent = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : 0;
+    const marginPercent = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : 0;
 
-    const customer = contactMap.get(s.customerId);
+    const customer = contactMap.get(so.customerId);
+    const bagCount = Number(so.bagCount || Math.floor(qtyKg / 25));
 
     return {
-      ...s,
+      ...so,
       qtyKg,
+      bagCount,
       pricePerKg,
       discount,
       shippingCost,
       subtotal,
       netRevenue,
       totalAmount,
-      cogsPerKg,
+      cogsPerKg: liveCogsPerKg,
       totalCogs,
       grossProfit,
-      profitMarginPercent,
-      customerName: customer ? customer.name : s.customerId,
+      marginPercent,
+      customerName: customer ? customer.name : (so.customerName || so.customerId),
       customerPhone: customer ? customer.phone : '',
       customerAddress: customer ? customer.address : ''
     };
   });
 
-  // 8. Aggregate Overall KPIs
-  const totalRawStockKg = recalibratedPurchases.reduce((acc, p) => acc + p.remainingKg, 0);
-  const totalRawStockValue = recalibratedPurchases.reduce((acc, p) => acc + (p.remainingKg * p.pricePerKg), 0);
+  // 9. Aggregate Pipeline Analytics & KPIs
+  // Buffer 1: Raw Reject
+  const rawStockKg = recalibratedRawPurchases.reduce((acc, r) => acc + r.remainingKg, 0);
+  const rawStockValue = recalibratedRawPurchases.reduce((acc, r) => acc + r.assetValue, 0);
 
-  const totalFinishedGoodsStockKg = finishedGoodsInventory.reduce((acc, fg) => acc + fg.currentStockKg, 0);
-  const totalFinishedGoodsStockValue = finishedGoodsInventory.reduce((acc, fg) => acc + fg.totalAssetValue, 0);
+  // Buffer 2: Clean Flakes
+  const flakesStockKg = recalibratedPreProcessings.reduce((acc, p) => acc + p.remainingFlakesKg, 0);
+  const flakesStockValue = recalibratedPreProcessings.reduce((acc, p) => acc + p.assetValue, 0);
 
-  const totalProductionInputKg = recalibratedProductions.reduce((acc, p) => acc + p.totalInputKg, 0);
-  const totalProductionOutputKg = recalibratedProductions.reduce((acc, p) => acc + p.outputKg, 0);
-  const totalProductionShrinkageKg = recalibratedProductions.reduce((acc, p) => acc + p.shrinkageKg, 0);
-  const avgShrinkagePercent = totalProductionInputKg > 0 ? (totalProductionShrinkageKg / totalProductionInputKg) * 100 : 0;
+  // Buffer 3: FG Pellets
+  const pelletStockKg = finishedGoodsPelletInventory.reduce((acc, fg) => acc + fg.currentStockKg, 0);
+  const pelletStockValue = finishedGoodsPelletInventory.reduce((acc, fg) => acc + fg.totalAssetValue, 0);
 
-  const totalSalesRevenue = recalibratedSales.reduce((acc, s) => acc + s.netRevenue, 0);
-  const totalSalesGrossProfit = recalibratedSales.reduce((acc, s) => acc + s.grossProfit, 0);
-  const avgGrossProfitMargin = totalSalesRevenue > 0 ? (totalSalesGrossProfit / totalSalesRevenue) * 100 : 0;
+  // Multi-tier Shrinkage
+  const totalRawInputStage1 = recalibratedPreProcessings.reduce((acc, p) => acc + p.rawUsedKg, 0);
+  const totalWasteStage1 = recalibratedPreProcessings.reduce((acc, p) => acc + p.wasteSortirKg, 0);
+  const avgSusutStage1 = totalRawInputStage1 > 0 ? (totalWasteStage1 / totalRawInputStage1) * 100 : 0;
+
+  const totalInputStage2 = recalibratedProductionSPKs.reduce((acc, spk) => acc + spk.totalInputMixKg, 0);
+  const totalWasteStage2 = recalibratedProductionSPKs.reduce((acc, spk) => acc + spk.wasteExtrusionKg, 0);
+  const avgSusutStage2 = totalInputStage2 > 0 ? (totalWasteStage2 / totalInputStage2) * 100 : 0;
+
+  // Sales & Profit
+  const totalRevenue = recalibratedSalesOrders.reduce((acc, so) => acc + so.netRevenue, 0);
+  const totalGrossProfit = recalibratedSalesOrders.reduce((acc, so) => acc + so.grossProfit, 0);
+  const avgProfitMargin = totalRevenue > 0 ? (totalGrossProfit / totalRevenue) * 100 : 0;
+
+  const totalFactoryAssetValuation = rawStockValue + flakesStockValue + pelletStockValue;
 
   return {
-    recalibratedPurchases,
-    recalibratedProductions,
-    finishedGoodsInventory,
-    recalibratedSales,
+    recalibratedRawPurchases,
+    recalibratedPreProcessings,
+    recalibratedProductionSPKs,
+    finishedGoodsPelletInventory,
+    recalibratedSalesOrders,
     kpis: {
-      totalRawStockKg,
-      totalRawStockValue,
-      totalFinishedGoodsStockKg,
-      totalFinishedGoodsStockValue,
-      totalProductionInputKg,
-      totalProductionOutputKg,
-      totalProductionShrinkageKg,
-      avgShrinkagePercent,
-      totalSalesRevenue,
-      totalSalesGrossProfit,
-      avgGrossProfitMargin,
-      totalOrdersCount: recalibratedSales.length,
-      totalProductionsCount: recalibratedProductions.length
+      rawStockKg,
+      rawStockValue,
+      flakesStockKg,
+      flakesStockValue,
+      pelletStockKg,
+      pelletStockValue,
+      totalFactoryAssetValuation,
+      totalRawInputStage1,
+      totalWasteStage1,
+      avgSusutStage1,
+      totalInputStage2,
+      totalWasteStage2,
+      avgSusutStage2,
+      totalRevenue,
+      totalGrossProfit,
+      avgProfitMargin,
+      totalSalesCount: recalibratedSalesOrders.length,
+      totalProductionCount: recalibratedProductionSPKs.length
     }
   };
 }
