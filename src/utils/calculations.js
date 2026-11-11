@@ -50,6 +50,10 @@ export function recalculateERP(database) {
     const polymer = polymerMap.get(r.polymerId);
     const supplier = contactMap.get(r.supplierId);
 
+    const paidAmount = Number(r.paidAmount !== undefined ? r.paidAmount : (r.paymentStatus === 'Belum Dibayar' ? 0 : totalAmount));
+    const paymentStatus = r.paymentStatus || (paidAmount >= totalAmount ? 'Lunas' : (paidAmount > 0 ? 'DP' : 'Belum Dibayar'));
+    const remainingPayable = Math.max(0, totalAmount - paidAmount);
+
     return {
       ...r,
       grossWeight: gross,
@@ -60,6 +64,9 @@ export function recalculateERP(database) {
       usedKg,
       remainingKg,
       stockStatus,
+      paidAmount,
+      paymentStatus,
+      remainingPayable,
       polymerCode: polymer ? polymer.code : 'PLASTIC',
       polymerName: polymer ? `${polymer.code} - ${polymer.name}` : r.polymerId,
       supplierName: supplier ? supplier.name : r.supplierId,
@@ -286,8 +293,24 @@ export function recalculateERP(database) {
     const customer = contactMap.get(so.customerId);
     const bagCount = Number(so.bagCount || Math.floor(qtyKg / 25));
 
+    const orderNo = so.orderNo || so.doNo || `DO-${String(so.id).slice(-4)}`;
+    const doNo = so.doNo || orderNo;
+    const invoiceNo = so.invoiceNo || (orderNo.startsWith('DO-') ? orderNo.replace('DO-', 'INV-') : `INV-${orderNo}`);
+    const truckPlate = so.truckPlate || so.vehicleNo || 'B 9876 PQR';
+    const paidAmount = Number(so.paidAmount !== undefined ? so.paidAmount : (so.paymentStatus === 'Belum Lunas' ? 0 : (so.paymentAmount || totalAmount)));
+    const paymentStatus = so.paymentStatus || (paidAmount >= totalAmount ? 'Lunas' : (paidAmount > 0 ? 'DP' : 'Belum Lunas'));
+    const remainingReceivable = Math.max(0, totalAmount - paidAmount);
+
     return {
       ...so,
+      orderNo,
+      doNo,
+      invoiceNo,
+      truckPlate,
+      driverName: so.driverName || 'Sopir Ekspedisi',
+      paidAmount,
+      paymentStatus,
+      remainingReceivable,
       qtyKg,
       bagCount,
       pricePerKg,
@@ -333,6 +356,10 @@ export function recalculateERP(database) {
   const totalGrossProfit = recalibratedSalesOrders.reduce((acc, so) => acc + so.grossProfit, 0);
   const avgProfitMargin = totalRevenue > 0 ? (totalGrossProfit / totalRevenue) * 100 : 0;
 
+  // Payables & Receivables (AP & AR)
+  const totalAccountsPayable = recalibratedRawPurchases.reduce((acc, r) => acc + (r.remainingPayable || 0), 0);
+  const totalAccountsReceivable = recalibratedSalesOrders.reduce((acc, so) => acc + (so.remainingReceivable || 0), 0);
+
   const totalFactoryAssetValuation = rawStockValue + flakesStockValue + pelletStockValue;
 
   return {
@@ -349,6 +376,8 @@ export function recalculateERP(database) {
       pelletStockKg,
       pelletStockValue,
       totalFactoryAssetValuation,
+      totalAccountsPayable,
+      totalAccountsReceivable,
       totalRawInputStage1,
       totalWasteStage1,
       avgSusutStage1,

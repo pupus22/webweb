@@ -10,6 +10,9 @@ import Stage5SalesModule from './components/Stage5SalesModule';
 import MasterDataModule from './components/MasterDataModule';
 import PrintModal from './components/PrintModal';
 import ConfirmModal from './components/ConfirmModal';
+import TraceabilityModal from './components/TraceabilityModal';
+import BagLabelModal from './components/BagLabelModal';
+import GlobalSearchModal from './components/GlobalSearchModal';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import {
@@ -20,6 +23,7 @@ import {
   importBackupJSON
 } from './data/storage';
 import { recalculateERP } from './utils/calculations';
+import { exportToCSV } from './utils/csvExport';
 
 export default function App() {
   const [database, setDatabase] = useState(() => loadDatabase());
@@ -27,6 +31,20 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  // Theme state: dark (default) | light
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('polycomp_theme') || 'dark';
+  });
+
+  const toggleTheme = () => {
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('polycomp_theme', next);
+      return next;
+    });
+  };
+
+  // Modals & Cross-stage shortcut states
   const [printOrder, setPrintOrder] = useState(null);
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -36,6 +54,15 @@ export default function App() {
     onConfirm: () => {}
   });
 
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [traceabilityIdentifier, setTraceabilityIdentifier] = useState(null);
+  const [bagLabelLot, setBagLabelLot] = useState(null);
+
+  // Shortcut staging state
+  const [stage2InitialRawId, setStage2InitialRawId] = useState(null);
+  const [stage3InitialFlakesId, setStage3InitialFlakesId] = useState(null);
+  const [stage5InitialLotNo, setStage5InitialLotNo] = useState(null);
+
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success') => {
@@ -43,12 +70,25 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Global Ctrl+K / Cmd+K shortcut listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchModalOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Persist to LocalStorage whenever database state updates
   useEffect(() => {
     saveDatabase(database);
   }, [database]);
 
   // Master 5-Stage Cascading Recalibration Engine
+  const recalibratedData = useMemo(() => recalculateERP(database), [database]);
   const {
     recalibratedRawPurchases,
     recalibratedPreProcessings,
@@ -56,7 +96,7 @@ export default function App() {
     finishedGoodsPelletInventory,
     recalibratedSalesOrders,
     kpis
-  } = useMemo(() => recalculateERP(database), [database]);
+  } = recalibratedData;
 
   // Setters for each sub-collection
   const setPolymers = (updater) => {
@@ -128,6 +168,111 @@ export default function App() {
     showToast('Transaksi Penjualan & Surat Jalan berhasil disimpan');
   };
 
+  // 1-Click Fast Workflow Handlers
+  const handleFastPreProcess = (rawItem) => {
+    setStage2InitialRawId(rawItem.id);
+    setActiveTab('stage2');
+    showToast(`Membuka form giling untuk batch ${rawItem.batchNo}`);
+  };
+
+  const handleFastCreateSPK = (flakesItem) => {
+    setStage3InitialFlakesId(flakesItem.id);
+    setActiveTab('stage3');
+    showToast(`Membuka form SPK untuk flakes ${flakesItem.outputFlakesBatchNo}`);
+  };
+
+  const handleFastCreateSale = (pelletItem) => {
+    setStage5InitialLotNo(pelletItem.lotNo);
+    setActiveTab('stage5');
+    showToast(`Membuka form penjualan untuk lot ${pelletItem.lotNo}`);
+  };
+
+  // Export Active Tab to CSV
+  const handleExportCSV = () => {
+    if (activeTab === 'stage1') {
+      exportToCSV('Tahap1_Pembelian_Reject', [
+        { label: 'Kode Batch', key: 'batchNo' },
+        { label: 'Tanggal', key: 'date' },
+        { label: 'Supplier', key: 'supplierName' },
+        { label: 'Polimer', key: 'polymerCode' },
+        { label: 'Bentuk Awal', key: 'formType' },
+        { label: 'Warna Dasar', key: 'rawColor' },
+        { label: 'Gross (Kg)', key: 'grossWeightKg' },
+        { label: 'Potongan (Kg)', key: 'tareWeightKg' },
+        { label: 'Netto (Kg)', key: 'netWeightKg' },
+        { label: 'Harga Beli/Kg', key: 'pricePerKg' },
+        { label: 'Total Beli (Rp)', key: 'totalAmount' },
+        { label: 'Sisa Stok (Kg)', key: 'remainingKg' },
+        { label: 'Status Stok', key: 'status' },
+        { label: 'Status Bayar', key: 'paymentStatus' }
+      ], recalibratedRawPurchases);
+    } else if (activeTab === 'stage2') {
+      exportToCSV('Tahap2_Sortir_Cuci_Flakes', [
+        { label: 'Batch Flakes', key: 'outputFlakesBatchNo' },
+        { label: 'Batch Reject', key: 'rawBatchNo' },
+        { label: 'Tanggal', key: 'date' },
+        { label: 'Nama Flakes', key: 'flakesName' },
+        { label: 'Polimer', key: 'polymerCode' },
+        { label: 'Warna', key: 'flakesColor' },
+        { label: 'Bahan Masuk (Kg)', key: 'rawUsedKg' },
+        { label: 'Output Flakes (Kg)', key: 'outputFlakesKg' },
+        { label: 'Waste Sortir (Kg)', key: 'wasteSortirKg' },
+        { label: 'Susut (%)', getter: (r) => Number(r.wastePercentage || 0).toFixed(2) + '%' },
+        { label: 'HPP Flakes/Kg', key: 'hppFlakesPerKg' },
+        { label: 'Sisa Stok (Kg)', key: 'remainingFlakesKg' }
+      ], recalibratedPreProcessings);
+    } else if (activeTab === 'stage3') {
+      exportToCSV('Tahap3_SPK_Ekstrusi', [
+        { label: 'No. SPK', key: 'spkNo' },
+        { label: 'Kode Lot Pelet', key: 'targetLotNo' },
+        { label: 'Tanggal', key: 'date' },
+        { label: 'Nama Produk', key: 'targetProductName' },
+        { label: 'Polimer', key: 'polymerType' },
+        { label: 'Warna', key: 'targetColor' },
+        { label: 'Status SPK', key: 'status' },
+        { label: 'Total Input (Kg)', key: 'totalInputMixKg' },
+        { label: 'Output Pelet (Kg)', key: 'outputPelletKg' },
+        { label: 'Susut Ekstrusi (Kg)', key: 'wasteExtrusionKg' },
+        { label: 'Loss (%)', getter: (r) => Number(r.wastePercentage || 0).toFixed(2) + '%' },
+        { label: 'HPP Final Pelet/Kg', key: 'hppFinalPelletPerKg' },
+        { label: 'Mesin Line', key: 'machineLine' }
+      ], recalibratedProductionSPKs);
+    } else if (activeTab === 'stage4') {
+      exportToCSV('Tahap4_Gudang_Pelet', [
+        { label: 'Kode Lot', key: 'lotNo' },
+        { label: 'No. SPK', key: 'spkNo' },
+        { label: 'Nama Produk', key: 'productName' },
+        { label: 'Polimer', key: 'polymerType' },
+        { label: 'Warna', key: 'targetColor' },
+        { label: 'QC Status', key: 'qcStatus' },
+        { label: 'MFI', key: 'mfi' },
+        { label: 'Stok Pelet (Kg)', key: 'currentStockKg' },
+        { label: 'Jumlah Sak (@25Kg)', key: 'availableBags' },
+        { label: 'HPP Pelet/Kg', key: 'hppFinalPelletPerKg' },
+        { label: 'Nilai Aset (Rp)', key: 'totalAssetValue' },
+        { label: 'Status', key: 'stockStatus' }
+      ], finishedGoodsPelletInventory);
+    } else if (activeTab === 'stage5') {
+      exportToCSV('Tahap5_Penjualan_DO', [
+        { label: 'No. DO', key: 'orderNo' },
+        { label: 'No. Invoice', key: 'invoiceNo' },
+        { label: 'Tanggal', key: 'date' },
+        { label: 'Customer', key: 'customerName' },
+        { label: 'Lot Pelet', key: 'targetLotNo' },
+        { label: 'Qty (Kg)', key: 'qtyKg' },
+        { label: 'Jumlah Sak', key: 'bagCount' },
+        { label: 'Harga/Kg', key: 'pricePerKg' },
+        { label: 'Total Omset', key: 'netRevenue' },
+        { label: 'HPP/Kg', key: 'cogsPerKg' },
+        { label: 'Laba Kotor', key: 'grossProfit' },
+        { label: 'Status Bayar', key: 'paymentStatus' },
+        { label: 'Plat Truk', key: 'truckPlate' }
+      ], recalibratedSalesOrders);
+    } else {
+      showToast('Pilih halaman Tahap 1 - 5 untuk mengekspor data tabel', 'info');
+    }
+  };
+
   // Reset Demo Factory Data
   const handleResetDemo = () => {
     setConfirmModal({
@@ -172,7 +317,9 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-purple-600 selection:text-white">
+      <div className={`min-h-screen flex flex-col font-sans overflow-x-hidden selection:bg-purple-600 selection:text-white ${
+        theme === 'light' ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-slate-100'
+      }`}>
         {/* Toast Notification */}
         {toast && (
           <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -186,11 +333,14 @@ export default function App() {
         {/* Global Navbar */}
         <Navbar
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onResetDemo={handleResetDemo}
-          onExport={handleExportBackup}
-          onImport={handleImportBackup}
           onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          onOpenSearch={() => setSearchModalOpen(true)}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onExportCSV={handleExportCSV}
+          onResetDemo={handleResetDemo}
+          onExportJSON={handleExportBackup}
+          onImportJSON={handleImportBackup}
         />
 
         {/* Main Layout Container (Sidebar + Content Area) */}
@@ -227,6 +377,8 @@ export default function App() {
                 polymers={database.polymers || []}
                 contacts={database.contacts || []}
                 onRequestDelete={setConfirmModal}
+                onFastPreProcess={handleFastPreProcess}
+                onOpenTraceability={(id) => setTraceabilityIdentifier(id)}
               />
             )}
 
@@ -237,6 +389,10 @@ export default function App() {
                 recalibratedRawPurchases={recalibratedRawPurchases}
                 costTariffs={database.costTariffs || {}}
                 onRequestDelete={setConfirmModal}
+                onFastCreateSPK={handleFastCreateSPK}
+                onOpenTraceability={(id) => setTraceabilityIdentifier(id)}
+                initialRawBatchId={stage2InitialRawId}
+                onClearInitialRawBatchId={() => setStage2InitialRawId(null)}
               />
             )}
 
@@ -248,6 +404,9 @@ export default function App() {
                 additives={database.additives || []}
                 costTariffs={database.costTariffs || {}}
                 onRequestDelete={setConfirmModal}
+                onOpenTraceability={(id) => setTraceabilityIdentifier(id)}
+                initialFlakesBatchId={stage3InitialFlakesId}
+                onClearInitialFlakesBatchId={() => setStage3InitialFlakesId(null)}
               />
             )}
 
@@ -259,6 +418,10 @@ export default function App() {
                 setStockAdjustments={setStockAdjustments}
                 setProductionSPKs={setProductionSPKs}
                 onRequestDelete={setConfirmModal}
+                onFastCreateSale={handleFastCreateSale}
+                onOpenBagLabel={(lot) => setBagLabelLot(lot)}
+                onOpenTraceability={(id) => setTraceabilityIdentifier(id)}
+                onFastCreateSPK={handleFastCreateSPK}
               />
             )}
 
@@ -270,6 +433,9 @@ export default function App() {
                 contacts={database.contacts || []}
                 onPrintOrder={(order) => setPrintOrder(order)}
                 onRequestDelete={setConfirmModal}
+                onOpenTraceability={(id) => setTraceabilityIdentifier(id)}
+                initialLotNo={stage5InitialLotNo}
+                onClearInitialLotNo={() => setStage5InitialLotNo(null)}
               />
             )}
 
@@ -327,6 +493,43 @@ export default function App() {
           confirmVariant={confirmModal.confirmVariant}
           onConfirm={confirmModal.onConfirm}
           onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        />
+
+        {/* Traceability Modal (Hulu ke Hilir 5-Tahap) */}
+        {traceabilityIdentifier && (
+          <TraceabilityModal
+            identifier={traceabilityIdentifier}
+            onClose={() => setTraceabilityIdentifier(null)}
+            rawPurchases={recalibratedRawPurchases}
+            preProcessings={recalibratedPreProcessings}
+            productionSPKs={recalibratedProductionSPKs}
+            finishedGoods={finishedGoodsPelletInventory}
+            salesOrders={recalibratedSalesOrders}
+          />
+        )}
+
+        {/* Bag / Pallet Tag Printable Modal */}
+        {bagLabelLot && (
+          <BagLabelModal
+            lot={bagLabelLot}
+            onClose={() => setBagLabelLot(null)}
+          />
+        )}
+
+        {/* Global Search Modal (Ctrl+K) */}
+        <GlobalSearchModal
+          isOpen={searchModalOpen}
+          onClose={() => setSearchModalOpen(false)}
+          onNavigate={(tab) => {
+            setActiveTab(tab);
+            setSearchModalOpen(false);
+          }}
+          onOpenTraceability={(id) => {
+            setTraceabilityIdentifier(id);
+            setSearchModalOpen(false);
+          }}
+          database={database}
+          recalibratedData={recalibratedData}
         />
       </div>
     </ErrorBoundary>

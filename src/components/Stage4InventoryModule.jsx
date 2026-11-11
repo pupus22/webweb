@@ -12,7 +12,13 @@ import {
   ClipboardList,
   Filter,
   X,
-  Scale
+  Scale,
+  ShoppingCart,
+  Tag,
+  GitBranch,
+  Printer,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import {
   formatRupiah,
@@ -28,7 +34,11 @@ export default function Stage4InventoryModule({
   stockAdjustments = [],
   setStockAdjustments,
   setProductionSPKs,
-  onRequestDelete
+  onRequestDelete,
+  onFastCreateSale,
+  onOpenBagLabel,
+  onOpenTraceability,
+  onFastCreateSPK
 }) {
   const [activeSubTab, setActiveSubTab] = useState('pellets'); // 'pellets' | 'flakes' | 'opname'
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,6 +50,8 @@ export default function Stage4InventoryModule({
   const [editingOpname, setEditingOpname] = useState(null);
   const [qcModalOpen, setQcModalOpen] = useState(false);
   const [editingQcItem, setEditingQcItem] = useState(null);
+  const [editLotModalOpen, setEditLotModalOpen] = useState(false);
+  const [editingLot, setEditingLot] = useState(null);
 
   // Summary Metrics
   const totalPelletKg = finishedGoodsPelletInventory.reduce((acc, x) => acc + (x.currentStockKg || 0), 0);
@@ -68,7 +80,7 @@ export default function Stage4InventoryModule({
 
   // Stock Opname Save
   const handleSaveOpname = (formData) => {
-    if (editingOpname) {
+    if (editingOpname && editingOpname.id) {
       setStockAdjustments(prev => prev.map(a => a.id === editingOpname.id ? { ...a, ...formData } : a));
     } else {
       const newId = `ADJ-${String(Date.now()).slice(-4)}`;
@@ -95,6 +107,40 @@ export default function Stage4InventoryModule({
     }));
     setQcModalOpen(false);
     setEditingQcItem(null);
+  };
+
+  // Edit Lot Save
+  const handleSaveLot = (updatedLot) => {
+    setProductionSPKs(prev => prev.map(spk => {
+      if ((spk.targetLotNo || spk.spkNo) === updatedLot.lotNo || spk.spkNo === updatedLot.spkNo) {
+        return {
+          ...spk,
+          targetProductName: updatedLot.productName,
+          targetColor: updatedLot.targetColor,
+          outputPelletKg: Number(updatedLot.outputPelletKg),
+          bagWeightKg: Number(updatedLot.bagWeightKg),
+          qcResult: {
+            ...spk.qcResult,
+            status: updatedLot.qcStatus,
+            mfiTest: updatedLot.mfi
+          }
+        };
+      }
+      return spk;
+    }));
+    setEditLotModalOpen(false);
+    setEditingLot(null);
+  };
+
+  // Delete Lot
+  const handleDeleteLot = (item) => {
+    onRequestDelete({
+      title: `Hapus Lot Pelet ${item.lotNo}`,
+      message: `Yakin ingin menghapus lot biji pelet ${item.lotNo} (${item.productName})? Data SPK terkait (${item.spkNo}) akan dihapus dari sistem dan stok akan disesuaikan.`,
+      onConfirm: () => {
+        setProductionSPKs(prev => prev.filter(spk => (spk.targetLotNo || spk.spkNo) !== item.lotNo && spk.spkNo !== item.spkNo));
+      }
+    });
   };
 
   return (
@@ -257,10 +303,10 @@ export default function Stage4InventoryModule({
 
           {/* High-density Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[950px]">
+            <table className="w-full text-left border-collapse min-w-[1050px]">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-950/70 text-2xs uppercase text-slate-400 font-semibold tracking-wider">
-                  <th className="py-2.5 px-3">Kode Lot Pelet</th>
+                  <th className="py-2.5 px-3">Kode Lot & SPK</th>
                   <th className="py-2.5 px-3">Produk & Warna</th>
                   <th className="py-2.5 px-3 text-center">Polimer</th>
                   <th className="py-2.5 px-3 text-center">QC Status & MFI</th>
@@ -269,20 +315,34 @@ export default function Stage4InventoryModule({
                   <th className="py-2.5 px-3 text-right">HPP Pelet / Kg</th>
                   <th className="py-2.5 px-3 text-right">Nilai Aset (Rp)</th>
                   <th className="py-2.5 px-3 text-center">Kesiapan</th>
-                  <th className="py-2.5 px-3 text-center sticky right-0 bg-slate-950/90">Aksi</th>
+                  <th className="py-2.5 px-3 text-center sticky right-0 bg-slate-950/90 min-w-[210px]">Aksi & Pintasan</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {filteredPellets.map((item) => (
                   <tr key={item.lotNo} className="hover:bg-slate-800/40 transition">
                     <td className="py-2 px-3">
-                      <div className="font-bold text-purple-400">{item.lotNo}</div>
-                      <div className="text-2xs text-slate-500">SPK: {item.spkNo}</div>
+                      <button
+                        type="button"
+                        onClick={() => onOpenTraceability && onOpenTraceability(item.lotNo)}
+                        className="font-bold text-purple-400 hover:text-purple-300 hover:underline flex items-center space-x-1 text-left"
+                        title="Klik untuk melacak silsilah batch hulu ke hilir"
+                      >
+                        <GitBranch className="w-3 h-3 shrink-0 text-purple-400" />
+                        <span>{item.lotNo}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenTraceability && onOpenTraceability(item.spkNo)}
+                        className="text-2xs text-slate-500 hover:text-slate-300 hover:underline block text-left"
+                      >
+                        SPK: {item.spkNo}
+                      </button>
                     </td>
 
                     <td className="py-2 px-3 font-sans">
-                      <div className="font-semibold text-white">{item.productName}</div>
-                      <div className="text-2xs text-slate-400">Warna: {item.targetColor}</div>
+                      <div className="font-semibold text-white leading-snug">{item.productName}</div>
+                      <div className="text-2xs text-slate-400">Warna: <span className="text-slate-300">{item.targetColor}</span></div>
                     </td>
 
                     <td className="py-2 px-3 text-center">
@@ -334,19 +394,57 @@ export default function Stage4InventoryModule({
                       </span>
                     </td>
 
-                    <td className="py-2 px-3 text-center sticky right-0 bg-slate-950/90 font-sans">
-                      <div className="flex items-center justify-center space-x-1">
+                    <td className="py-2 px-3 text-center sticky right-0 bg-slate-950/95 font-sans">
+                      <div className="flex items-center justify-center flex-wrap gap-1">
+                        {/* 1-Click Fast Workflow: Jual / Buat DO */}
+                        {item.currentStockKg > 0 && onFastCreateSale && (
+                          <button
+                            onClick={() => onFastCreateSale(item)}
+                            className="px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-bold text-2xs flex items-center space-x-1 shadow-xs transition"
+                            title="Buat Surat Jalan & Faktur Penjualan langsung untuk lot pelet ini"
+                          >
+                            <ShoppingCart className="w-3 h-3" />
+                            <span>Jual / DO</span>
+                          </button>
+                        )}
+
+                        {/* Cetak Label Karung Sak (25 Kg) */}
+                        {onOpenBagLabel && (
+                          <button
+                            onClick={() => onOpenBagLabel(item)}
+                            className="px-2 py-1 rounded bg-amber-950/80 hover:bg-amber-900 text-amber-300 hover:text-white text-2xs flex items-center space-x-1 border border-amber-500/30 transition"
+                            title="Preview & Cetak Label Karung Sak 25 Kg"
+                          >
+                            <Tag className="w-3 h-3" />
+                            <span>Label Sak</span>
+                          </button>
+                        )}
+
+                        {/* Lacak Silsilah Batch */}
+                        {onOpenTraceability && (
+                          <button
+                            onClick={() => onOpenTraceability(item.lotNo)}
+                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
+                            title="Lacak Silsilah (Traceability) Batch Hulu ke Hilir"
+                          >
+                            <GitBranch className="w-3.5 h-3.5 text-purple-400" />
+                          </button>
+                        )}
+
+                        {/* QC Edit */}
                         <button
                           onClick={() => {
                             setEditingQcItem(item);
                             setQcModalOpen(true);
                           }}
-                          className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-2xs flex items-center space-x-1"
-                          title="Koreksi QC & Status Lot"
+                          className="px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-2xs flex items-center space-x-0.5"
+                          title="Koreksi QC & MFI"
                         >
                           <Pencil className="w-3 h-3" />
                           <span>QC</span>
                         </button>
+
+                        {/* Stock Opname Fisik */}
                         <button
                           onClick={() => {
                             setEditingOpname({
@@ -359,11 +457,31 @@ export default function Stage4InventoryModule({
                             });
                             setOpnameModalOpen(true);
                           }}
-                          className="px-2 py-1 rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 hover:text-white text-2xs flex items-center space-x-1 border border-emerald-500/30"
+                          className="p-1 rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 hover:text-white border border-emerald-500/30"
                           title="Catat Stock Opname Lot Ini"
                         >
-                          <Scale className="w-3 h-3" />
-                          <span>Opname</span>
+                          <Scale className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Edit Data Lot Pelet */}
+                        <button
+                          onClick={() => {
+                            setEditingLot(item);
+                            setEditLotModalOpen(true);
+                          }}
+                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+                          title="Edit Spesifikasi Lot Pelet"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Hapus Lot */}
+                        <button
+                          onClick={() => handleDeleteLot(item)}
+                          className="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-rose-200"
+                          title="Hapus Lot Pelet"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -402,7 +520,7 @@ export default function Stage4InventoryModule({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[850px]">
+            <table className="w-full text-left border-collapse min-w-[950px]">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-950/70 text-2xs uppercase text-slate-400 font-semibold tracking-wider">
                   <th className="py-2.5 px-3">Kode Batch Flakes</th>
@@ -413,18 +531,33 @@ export default function Stage4InventoryModule({
                   <th className="py-2.5 px-3 text-right">HPP Flakes / Kg</th>
                   <th className="py-2.5 px-3 text-right">Nilai Aset Flakes</th>
                   <th className="py-2.5 px-3 text-center">Status</th>
+                  <th className="py-2.5 px-3 text-center sticky right-0 bg-slate-950/90">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {filteredFlakes.map((f) => (
                   <tr key={f.id} className="hover:bg-slate-800/40 transition">
                     <td className="py-2 px-3">
-                      <div className="font-bold text-blue-400">{f.outputFlakesBatchNo}</div>
-                      <div className="text-2xs text-slate-500 font-sans">Reject: {f.rawBatchNo}</div>
+                      <button
+                        type="button"
+                        onClick={() => onOpenTraceability && onOpenTraceability(f.outputFlakesBatchNo)}
+                        className="font-bold text-blue-400 hover:text-blue-300 hover:underline flex items-center space-x-1 text-left"
+                        title="Klik untuk melihat silsilah batch flakes"
+                      >
+                        <GitBranch className="w-3 h-3 shrink-0 text-blue-400" />
+                        <span>{f.outputFlakesBatchNo}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenTraceability && onOpenTraceability(f.rawBatchNo)}
+                        className="text-2xs text-slate-500 hover:text-slate-300 hover:underline block text-left"
+                      >
+                        Reject: {f.rawBatchNo}
+                      </button>
                     </td>
 
                     <td className="py-2 px-3 font-sans">
-                      <div className="font-semibold text-white">{f.flakesName}</div>
+                      <div className="font-semibold text-white leading-snug">{f.flakesName}</div>
                       <div className="text-2xs text-slate-400">Kadar Air: &lt; 1% (Centrifugal)</div>
                     </td>
 
@@ -458,11 +591,35 @@ export default function Stage4InventoryModule({
                         {f.flakesStockStatus}
                       </span>
                     </td>
+
+                    <td className="py-2 px-3 text-center sticky right-0 bg-slate-950/90 font-sans">
+                      <div className="flex items-center justify-center space-x-1">
+                        {f.remainingFlakesKg > 0 && onFastCreateSPK && (
+                          <button
+                            onClick={() => onFastCreateSPK(f)}
+                            className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold text-2xs flex items-center space-x-1 shadow-xs transition"
+                            title="Buat SPK Blending Ekstrusi menggunakan flakes ini"
+                          >
+                            <Zap className="w-3 h-3 text-amber-300" />
+                            <span>Buat SPK</span>
+                          </button>
+                        )}
+                        {onOpenTraceability && (
+                          <button
+                            onClick={() => onOpenTraceability(f.outputFlakesBatchNo)}
+                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+                            title="Lacak Silsilah Batch Flakes"
+                          >
+                            <GitBranch className="w-3.5 h-3.5 text-blue-400" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {filteredFlakes.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-500 font-sans">
+                    <td colSpan={9} className="py-8 text-center text-slate-500 font-sans">
                       Tidak ada stok cacahan flakes kering di gudang.
                     </td>
                   </tr>
@@ -510,7 +667,16 @@ export default function Stage4InventoryModule({
                 {stockAdjustments.map((adj) => (
                   <tr key={adj.id} className="hover:bg-slate-800/40 transition">
                     <td className="py-2 px-3 text-slate-300 font-sans">{formatDate(adj.date)}</td>
-                    <td className="py-2 px-3 font-bold text-purple-400">{adj.targetLotNo}</td>
+                    <td className="py-2 px-3">
+                      <button
+                        type="button"
+                        onClick={() => onOpenTraceability && onOpenTraceability(adj.targetLotNo)}
+                        className="font-bold text-purple-400 hover:text-purple-300 hover:underline flex items-center space-x-1 text-left"
+                      >
+                        <GitBranch className="w-3 h-3 text-purple-400" />
+                        <span>{adj.targetLotNo}</span>
+                      </button>
+                    </td>
                     <td className="py-2 px-3 text-right text-slate-400">{formatWeight(adj.bookStockKg || 0)}</td>
                     <td className="py-2 px-3 text-right font-bold text-white">{formatWeight(adj.actualStockKg || 0)}</td>
                     <td className="py-2 px-3 text-right font-bold">
@@ -581,6 +747,18 @@ export default function Stage4InventoryModule({
           onClose={() => {
             setQcModalOpen(false);
             setEditingQcItem(null);
+          }}
+        />
+      )}
+
+      {/* MODAL: EDIT DATA SPESIFIKASI LOT PELET */}
+      {editLotModalOpen && editingLot && (
+        <EditLotModal
+          item={editingLot}
+          onSave={handleSaveLot}
+          onClose={() => {
+            setEditLotModalOpen(false);
+            setEditingLot(null);
           }}
         />
       )}
@@ -793,6 +971,121 @@ function QcEditModal({ item, onSave, onClose }) {
           <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
             <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">Batal</button>
             <button type="submit" className="px-4 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold">Simpan Status QC</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// Sub-Modal: Edit Lot Pelet (Full CRUD)
+// -------------------------------------------------------------
+function EditLotModal({ item, onSave, onClose }) {
+  const [formData, setFormData] = useState({
+    lotNo: item.lotNo,
+    spkNo: item.spkNo,
+    productName: item.productName || '',
+    targetColor: item.targetColor || '',
+    outputPelletKg: item.originalOutputKg || item.currentStockKg || 1000,
+    bagWeightKg: item.bagWeightKg || 25,
+    qcStatus: item.qcStatus || 'Lulus QC',
+    mfi: item.mfi || '12 - 14 g/10min'
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-md w-full overflow-hidden text-xs">
+        <div className="flex justify-between items-center px-4 py-3 border-b border-slate-800 bg-slate-950/40">
+          <div className="flex items-center space-x-2">
+            <Pencil className="w-4 h-4 text-purple-400" />
+            <h3 className="font-bold text-white text-sm">Edit Spesifikasi Lot: {item.lotNo}</h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 space-y-3 font-sans">
+          <div className="p-2.5 rounded bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
+            <span className="text-slate-400">Kode Lot:</span>
+            <span className="font-mono font-bold text-purple-400">{item.lotNo}</span>
+          </div>
+
+          <div>
+            <label className="block text-slate-400 text-2xs mb-1">Nama Produk Biji Plastik *</label>
+            <input
+              required
+              type="text"
+              value={formData.productName}
+              onChange={e => setFormData({ ...formData, productName: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-purple-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-400 text-2xs mb-1">Warna Pelet *</label>
+            <input
+              required
+              type="text"
+              value={formData.targetColor}
+              onChange={e => setFormData({ ...formData, targetColor: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-purple-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-400 text-2xs mb-1">Timbangan Output (Kg) *</label>
+              <input
+                required
+                type="number"
+                step="0.1"
+                value={formData.outputPelletKg}
+                onChange={e => setFormData({ ...formData, outputPelletKg: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-xs focus:outline-hidden focus:border-purple-500"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-400 text-2xs mb-1">Kemasan Sak (Kg/Karung)</label>
+              <input
+                type="number"
+                value={formData.bagWeightKg}
+                onChange={e => setFormData({ ...formData, bagWeightKg: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-xs focus:outline-hidden focus:border-purple-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-400 text-2xs mb-1">Status QC</label>
+              <select
+                value={formData.qcStatus}
+                onChange={e => setFormData({ ...formData, qcStatus: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-white text-xs focus:outline-hidden focus:border-purple-500"
+              >
+                <option value="Lulus QC">Lulus QC</option>
+                <option value="Karantina">Karantina</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-slate-400 text-2xs mb-1">MFI Flow Rate</label>
+              <input
+                type="text"
+                value={formData.mfi}
+                onChange={e => setFormData({ ...formData, mfi: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-white text-xs focus:outline-hidden focus:border-purple-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">Batal</button>
+            <button type="submit" className="px-4 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold">Simpan Perubahan</button>
           </div>
         </form>
       </div>

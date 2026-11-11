@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Pencil,
@@ -6,11 +6,13 @@ import {
   Search,
   Recycle,
   Filter,
-  Flame,
-  Scale,
-  X,
+  Layers,
   Droplets,
-  Wind
+  Wind,
+  Scale,
+  Zap,
+  GitBranch,
+  X
 } from 'lucide-react';
 import {
   formatRupiah,
@@ -22,19 +24,31 @@ import {
 } from '../utils/formatters';
 
 export default function Stage2PreProcessingModule({
-  recalibratedPreProcessings,
+  recalibratedPreProcessings = [],
   setPreProcessings,
-  recalibratedRawPurchases,
-  polymers,
-  costTariffs,
-  onRequestDelete
+  recalibratedRawPurchases = [],
+  polymers = [],
+  costTariffs = {},
+  onRequestDelete,
+  onFastCreateSPK,
+  onOpenTraceability,
+  initialRawBatchId = null,
+  onClearInitialRawBatchId
 }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [modalState, setModalState] = useState({ isOpen: false, item: null });
+  const [modalState, setModalState] = useState({ isOpen: false, item: null, preselectedRawId: null });
+
+  // Handle auto-open if fast-workflow triggered from Stage 1
+  useEffect(() => {
+    if (initialRawBatchId) {
+      setModalState({ isOpen: true, item: null, preselectedRawId: initialRawBatchId });
+      if (onClearInitialRawBatchId) onClearInitialRawBatchId();
+    }
+  }, [initialRawBatchId, onClearInitialRawBatchId]);
 
   // Filter available raw reject batches (stock > 0)
   const availableRawLots = recalibratedRawPurchases.filter(
-    r => r.remainingKg > 0 || (modalState.item && modalState.item.rawPurchaseId === r.id)
+    r => r.remainingKg > 0 || (modalState.item && modalState.item.rawPurchaseId === r.id) || (modalState.preselectedRawId === r.id)
   );
 
   const handleSave = (formData) => {
@@ -50,7 +64,7 @@ export default function Stage2PreProcessingModule({
         ...prev
       ]);
     }
-    setModalState({ isOpen: false, item: null });
+    setModalState({ isOpen: false, item: null, preselectedRawId: null });
   };
 
   const filtered = recalibratedPreProcessings.filter(p => {
@@ -71,15 +85,15 @@ export default function Stage2PreProcessingModule({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari Batch Flakes, Metode, No Proses..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-md pl-8 pr-2.5 py-1.5 text-white placeholder-slate-500 focus:outline-hidden focus:border-sky-500"
+              className="w-full bg-slate-950 border border-slate-700 rounded-md pl-8 pr-2.5 py-1.5 text-white placeholder-slate-500 focus:outline-hidden focus:border-sky-500 text-xs"
             />
           </div>
         </div>
 
         <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
           <button
-            onClick={() => setModalState({ isOpen: true, item: null })}
-            className="flex items-center space-x-1.5 px-3 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 bg-sky-600 hover:bg-sky-500 text-white rounded-md font-semibold transition"
+            onClick={() => setModalState({ isOpen: true, item: null, preselectedRawId: null })}
+            className="flex items-center space-x-1.5 px-3 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 bg-sky-600 hover:bg-sky-500 text-white rounded-md font-semibold transition text-xs w-full sm:w-auto justify-center"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>+ Proses Giling & Cuci Baru</span>
@@ -88,7 +102,7 @@ export default function Stage2PreProcessingModule({
       </div>
 
       {/* Table Section */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden text-xs">
         <div className="p-3 bg-slate-950/60 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
@@ -96,32 +110,32 @@ export default function Stage2PreProcessingModule({
               <span>Tahap 2: Sortir, Crushing (Giling), Cuci & Drying (Pre-Processing)</span>
             </h3>
             <p className="text-2xs text-slate-400">
-              Mengubah bahan reject kotor menjadi cacahan bersih kering (Flakes). Susut dan HPP Flakes terhitung otomatis.
+              Mengubah limbah kotor menjadi cacahan bersih kering (Flakes). Susut lumpur/label & HPP Flakes terhitung otomatis.
             </p>
           </div>
           <div className="text-right font-mono text-xs">
-            <span className="text-2xs text-slate-400 block">Total Aset Cacahan Flakes:</span>
+            <span className="text-2xs text-slate-400 block">Total Aset Flakes Bersih:</span>
             <span className="text-sm font-bold text-sky-400">
-              {formatRupiah(recalibratedPreProcessings.reduce((acc, p) => acc + p.assetValue, 0))}
+              {formatRupiah(recalibratedPreProcessings.reduce((acc, p) => acc + (p.assetValue || 0), 0))}
             </span>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse font-sans">
+          <table className="w-full text-left border-collapse font-sans min-w-[1050px]">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-2xs uppercase tracking-wider">
                 <th className="py-2.5 px-3">No. Proses & Tgl</th>
-                <th className="py-2.5 px-3">Lot Reject Asal</th>
-                <th className="py-2.5 px-3">Batch & Nama Flakes Bersih</th>
+                <th className="py-2.5 px-3">Batch Reject Asal</th>
+                <th className="py-2.5 px-3">Batch & Nama Flakes</th>
                 <th className="py-2.5 px-3">Metode Cuci / Giling</th>
-                <th className="py-2.5 px-3 text-right">Reject Masuk (Kg)</th>
-                <th className="py-2.5 px-3 text-right">Hasil Flakes (Kg)</th>
-                <th className="py-2.5 px-3 text-right">Sampah Terbuang</th>
+                <th className="py-2.5 px-3 text-right">Reject Masuk</th>
+                <th className="py-2.5 px-3 text-right">Flakes Bersih</th>
+                <th className="py-2.5 px-3 text-right">Lumpur / Sampah</th>
                 <th className="py-2.5 px-3 text-right">HPP Flakes / Kg</th>
                 <th className="py-2.5 px-3 text-right">Sisa Stok Flakes</th>
                 <th className="py-2.5 px-3 text-center">Status</th>
-                <th className="py-2.5 px-3 text-center w-24 sticky right-0 bg-slate-900 shadow-md">Aksi</th>
+                <th className="py-2.5 px-3 text-center sticky right-0 bg-slate-900 shadow-md">Aksi & Alur</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -133,27 +147,47 @@ export default function Stage2PreProcessingModule({
                       <span className="font-bold text-sky-400 block">{prc.processNo}</span>
                       <span className="text-2xs text-slate-400 font-sans">{formatDate(prc.date)}</span>
                     </td>
+
                     <td className="py-2.5 px-3">
-                      <span className="font-bold text-emerald-400 block">{prc.rawBatchNo}</span>
+                      <button
+                        onClick={() => onOpenTraceability && onOpenTraceability(prc.rawBatchNo)}
+                        className="font-bold text-emerald-400 hover:text-emerald-300 underline font-mono text-left flex items-center space-x-1"
+                        title="Klik untuk lacak asal reject ini"
+                      >
+                        <span>{prc.rawBatchNo}</span>
+                        <GitBranch className="w-3 h-3 opacity-60" />
+                      </button>
                       <span className="text-2xs text-slate-400">Beli: {formatRupiah(prc.rawUnitPrice)}/Kg</span>
                     </td>
+
                     <td className="py-2.5 px-3 font-sans">
-                      <span className="font-mono font-bold text-purple-400 block">{prc.outputFlakesBatchNo}</span>
-                      <span className="font-semibold text-white truncate max-w-[200px] block">{prc.flakesName}</span>
+                      <button
+                        onClick={() => onOpenTraceability && onOpenTraceability(prc.outputFlakesBatchNo)}
+                        className="font-mono font-bold text-purple-400 hover:text-purple-300 underline text-left flex items-center space-x-1"
+                        title="Klik untuk lacak silsilah flakes ini"
+                      >
+                        <span>{prc.outputFlakesBatchNo}</span>
+                        <GitBranch className="w-3 h-3 opacity-60" />
+                      </button>
+                      <span className="font-semibold text-white block leading-snug">{prc.flakesName}</span>
                     </td>
+
                     <td className="py-2.5 px-3 font-sans text-2xs text-slate-300">
                       <div className="flex items-center space-x-1">
                         {prc.method.includes('Wash') ? <Droplets className="w-3.5 h-3.5 text-sky-400 shrink-0" /> : <Wind className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                        <span className="truncate max-w-[150px]">{prc.method}</span>
+                        <span className="font-medium">{prc.method}</span>
                       </div>
-                      <span className="text-slate-500">Tarif: {formatRupiah(prc.processCostRatePerKg)}/Kg</span>
+                      <span className="text-slate-500">Tarif Olah: {formatRupiah(prc.processCostRatePerKg)}/Kg</span>
                     </td>
+
                     <td className="py-2.5 px-3 text-right text-slate-300">
                       {formatNumber(prc.rawUsedKg, 1)} Kg
                     </td>
-                    <td className="py-2.5 px-3 text-right font-bold text-emerald-400">
+
+                    <td className="py-2.5 px-3 text-right font-bold text-emerald-400 text-sm">
                       {formatNumber(prc.outputFlakesKg, 1)} Kg
                     </td>
+
                     <td className="py-2.5 px-3 text-right">
                       <span className="text-rose-400 font-bold block">
                         -{formatNumber(prc.wasteSortirKg, 1)} Kg
@@ -162,27 +196,43 @@ export default function Stage2PreProcessingModule({
                         {formatPercent(prc.wastePercentage)}
                       </span>
                     </td>
+
                     <td className="py-2.5 px-3 text-right font-bold text-sky-400">
                       {formatRupiah(prc.hppFlakesPerKg)}
                     </td>
+
                     <td className="py-2.5 px-3 text-right">
-                      <span className={`font-bold block ${isExhausted ? 'text-slate-500' : 'text-purple-400'}`}>
+                      <span className={`font-bold block text-sm ${isExhausted ? 'text-slate-500' : 'text-purple-400'}`}>
                         {formatNumber(prc.remainingFlakesKg, 1)} Kg
                       </span>
                       <span className="text-2xs text-slate-400 font-sans">
                         {isExhausted ? 'Habis terolah' : `Terpakai: ${formatNumber(prc.usedInExtrusionKg, 1)} Kg`}
                       </span>
                     </td>
+
                     <td className="py-2.5 px-3 text-center font-sans">
                       <span className={`px-2 py-0.5 rounded-full text-2xs font-semibold ${getStatusBadge(prc.status)}`}>
                         {prc.status}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-center sticky right-0 bg-slate-900 shadow-md">
+
+                    <td className="py-2.5 px-3 text-center sticky right-0 bg-slate-900 shadow-md font-sans">
                       <div className="flex items-center justify-center space-x-1">
+                        {/* 1-Click Fast Workflow to Stage 3 */}
+                        {!isExhausted && onFastCreateSPK && (
+                          <button
+                            onClick={() => onFastCreateSPK(prc)}
+                            className="px-2 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-bold text-2xs flex items-center space-x-1 shadow transition"
+                            title="Buat SPK Blending di Tahap 3 menggunakan Flakes ini"
+                          >
+                            <Zap className="w-3 h-3 text-amber-300" />
+                            <span>SPK</span>
+                          </button>
+                        )}
+
                         <button
-                          onClick={() => setModalState({ isOpen: true, item: prc })}
-                          className="p-1.5 min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center"
+                          onClick={() => setModalState({ isOpen: true, item: prc, preselectedRawId: null })}
+                          className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
                           title="Edit Hasil Timbangan Flakes"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -193,7 +243,7 @@ export default function Stage2PreProcessingModule({
                             message: `Yakin ingin menghapus ${prc.processNo}? Stok cacahan flakes ${prc.outputFlakesBatchNo} akan ditarik dan bahan reject dikembalikan.`,
                             onConfirm: () => setPreProcessings(prev => prev.filter(x => x.id !== prc.id))
                           })}
-                          className="p-1.5 min-h-[36px] min-w-[36px] sm:min-h-0 sm:min-w-0 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-rose-200 flex items-center justify-center"
+                          className="p-1.5 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-rose-200"
                           title="Hapus"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -220,10 +270,10 @@ export default function Stage2PreProcessingModule({
         <PreProcessingFormModal
           item={modalState.item}
           availableRawLots={availableRawLots}
-          polymers={polymers}
+          preselectedRawId={modalState.preselectedRawId}
           defaultCostRate={costTariffs.preProcessingRatePerKg}
           onSave={handleSave}
-          onClose={() => setModalState({ isOpen: false, item: null })}
+          onClose={() => setModalState({ isOpen: false, item: null, preselectedRawId: null })}
         />
       )}
     </div>
@@ -231,75 +281,86 @@ export default function Stage2PreProcessingModule({
 }
 
 // -------------------------------------------------------------
-// Sub-Modal: Pre-Processing Form
+// Sub-Modal: Input & Edit Pre-Processing
 // -------------------------------------------------------------
-function PreProcessingFormModal({ item, availableRawLots, polymers, defaultCostRate, onSave, onClose }) {
+function PreProcessingFormModal({ item, availableRawLots = [], preselectedRawId = null, defaultCostRate = 1250, onSave, onClose }) {
   const today = new Date().toISOString().slice(0, 10);
-  const dateCode = today.replace(/-/g, '').slice(2);
-  const defaultProcessNo = `PRC-${dateCode}-${String(Date.now()).slice(-3)}`;
-  const defaultFlakesBatch = `FLK-PP-${dateCode}-${String(Date.now()).slice(-2)}`;
+  const defaultProcess = `PRC-${today.replace(/-/g, '').slice(2)}-${String(Date.now()).slice(-3)}`;
+  const defaultFlakesBatch = `FLK-${today.replace(/-/g, '').slice(2)}-${String(Date.now()).slice(-3)}`;
 
-  const initialRaw = availableRawLots[0];
+  const chosenRawId = item?.rawPurchaseId || preselectedRawId || availableRawLots[0]?.id || '';
+  const initialRaw = availableRawLots.find(r => r.id === chosenRawId);
 
   const [formData, setFormData] = useState({
-    processNo: item?.processNo || defaultProcessNo,
+    processNo: item?.processNo || defaultProcess,
     date: item?.date || today,
-    rawPurchaseId: item?.rawPurchaseId || (initialRaw?.id || ''),
-    polymerId: item?.polymerId || (initialRaw?.polymerId || polymers[0]?.id || ''),
+    rawPurchaseId: chosenRawId,
     outputFlakesBatchNo: item?.outputFlakesBatchNo || defaultFlakesBatch,
-    flakesName: item?.flakesName || 'Cacahan Flakes PP Bersih Kering',
-    method: item?.method || 'Wet Grinding + Hot Wash + Spin Drying',
-    rawUsedKg: item?.rawUsedKg !== undefined ? item.rawUsedKg : 1000,
-    outputFlakesKg: item?.outputFlakesKg !== undefined ? item.outputFlakesKg : 940,
+    flakesName: item?.flakesName || (initialRaw ? `Cacahan Flakes ${initialRaw.polymerCode} Bersih Kering` : 'Cacahan Flakes Bersih Kering'),
+    flakesColor: item?.flakesColor || (initialRaw ? initialRaw.colorBase : 'Campur'),
+    rawUsedKg: item?.rawUsedKg !== undefined ? item.rawUsedKg : (initialRaw ? Math.min(2000, initialRaw.remainingKg) : 1000),
+    outputFlakesKg: item?.outputFlakesKg !== undefined ? item.outputFlakesKg : 900,
+    method: item?.method || 'Wet Washing Line + Hot Centrifugal Dryer',
     processCostRatePerKg: item?.processCostRatePerKg !== undefined ? item.processCostRatePerKg : defaultCostRate,
-    operator: item?.operator || 'Regu Cuci Shift 1',
-    status: item?.status || 'Selesai',
+    operator: item?.operator || 'Regu Shift Giling Pagi',
+    status: item?.status || 'Siap Blending',
     notes: item?.notes || ''
   });
 
   const selectedRaw = availableRawLots.find(r => r.id === formData.rawPurchaseId);
-  const maxAvailableRawKg = selectedRaw ? (selectedRaw.remainingKg + (item ? item.rawUsedKg : 0)) : 0;
   const rawUnitPrice = selectedRaw ? selectedRaw.pricePerKg : 8500;
+  const maxAvailableRawKg = selectedRaw ? (selectedRaw.remainingKg + (item && item.rawPurchaseId === selectedRaw.id ? Number(item.rawUsedKg || 0) : 0)) : 0;
 
-  const rawUsed = Number(formData.rawUsedKg) || 0;
-  const outputFlakes = Number(formData.outputFlakesKg) || 0;
-  const rate = Number(formData.processCostRatePerKg) || defaultCostRate;
+  // Live Calculations
+  const rawUsedKg = Number(formData.rawUsedKg) || 0;
+  const outputFlakesKg = Number(formData.outputFlakesKg) || 0;
+  const rawMaterialCost = rawUsedKg * rawUnitPrice;
+  const processRate = Number(formData.processCostRatePerKg) || defaultCostRate;
+  const totalProcessCost = outputFlakesKg * processRate;
+  const totalStageCost = rawMaterialCost + totalProcessCost;
+  const wasteKg = Math.max(0, rawUsedKg - outputFlakesKg);
+  const wastePct = rawUsedKg > 0 ? (wasteKg / rawUsedKg) * 100 : 0;
+  const hppFlakes = outputFlakesKg > 0 ? (totalStageCost / outputFlakesKg) : 0;
 
-  // Real-time calculations
-  const rawCost = rawUsed * rawUnitPrice;
-  const totalProcessCost = outputFlakes * rate;
-  const totalStageCost = rawCost + totalProcessCost;
-  const wasteKg = Math.max(0, rawUsed - outputFlakes);
-  const wastePct = rawUsed > 0 ? (wasteKg / rawUsed) * 100 : 0;
-  const hppFlakes = outputFlakes > 0 ? (totalStageCost / outputFlakes) : 0;
+  const isRawExceeded = rawUsedKg > maxAvailableRawKg;
+  const isOutputExceeded = outputFlakesKg > rawUsedKg;
 
   const handleRawChange = (rawId) => {
     const raw = availableRawLots.find(r => r.id === rawId);
     setFormData(prev => ({
       ...prev,
       rawPurchaseId: rawId,
-      polymerId: raw?.polymerId || prev.polymerId,
-      outputFlakesBatchNo: raw ? `FLK-${raw.polymerCode || 'PL'}-${dateCode}-${String(Date.now()).slice(-2)}` : prev.outputFlakesBatchNo,
-      flakesName: raw ? `Cacahan Flakes ${raw.polymerCode || ''} (${raw.form})` : prev.flakesName
+      flakesName: raw ? `Cacahan Flakes ${raw.polymerCode} Bersih Kering` : prev.flakesName,
+      flakesColor: raw ? raw.colorBase : prev.flakesColor,
+      rawUsedKg: raw ? Math.min(prev.rawUsedKg, raw.remainingKg) : prev.rawUsedKg
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.processNo || !formData.rawPurchaseId || outputFlakes <= 0) return;
+    if (!formData.rawPurchaseId || !formData.outputFlakesBatchNo || rawUsedKg <= 0 || outputFlakesKg <= 0) return;
+    if (isRawExceeded) {
+      alert(`Berat kotor masuk (${rawUsedKg} Kg) melebihi stok tersedia (${maxAvailableRawKg} Kg)!`);
+      return;
+    }
+    if (isOutputExceeded) {
+      alert(`Output flakes bersih (${outputFlakesKg} Kg) tidak boleh melebihi bahan masuk (${rawUsedKg} Kg)!`);
+      return;
+    }
 
     onSave({
       ...formData,
-      rawUsedKg: rawUsed,
+      rawUsedKg,
       rawUnitPrice,
-      rawMaterialCost: rawCost,
-      outputFlakesKg: outputFlakes,
-      processCostRatePerKg: rate,
+      rawMaterialCost,
+      outputFlakesKg,
+      processCostRatePerKg: processRate,
       totalProcessCost,
       totalStageCost,
       wasteSortirKg: wasteKg,
       wastePercentage: wastePct,
-      hppFlakesPerKg: hppFlakes
+      hppFlakesPerKg: hppFlakes,
+      polymerId: selectedRaw ? selectedRaw.polymerId : null
     });
   };
 
@@ -310,214 +371,205 @@ function PreProcessingFormModal({ item, availableRawLots, polymers, defaultCostR
           <div className="flex items-center space-x-2">
             <Recycle className="w-4 h-4 text-sky-400" />
             <h3 className="font-bold text-white text-sm">
-              {item ? `Koreksi Proses Giling & Cuci: ${item.processNo}` : 'Form Proses Sortir, Giling (Crusher) & Pencucian'}
+              {item ? `Koreksi Hasil Giling & Cuci: ${item.processNo}` : 'Input Proses Giling, Cuci & Drying Flakes'}
             </h3>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-3.5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <form onSubmit={handleSubmit} className="p-4 space-y-3 font-sans">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-slate-400 font-medium mb-1">No. Perintah Proses *</label>
+              <label className="block text-slate-400 text-2xs mb-1">No. Proses *</label>
               <input
                 required
                 type="text"
                 value={formData.processNo}
                 onChange={e => setFormData({ ...formData, processNo: e.target.value.toUpperCase() })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono uppercase focus:outline-hidden focus:border-sky-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono uppercase text-xs focus:outline-hidden focus:border-sky-500"
               />
             </div>
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Tanggal Proses *</label>
+              <label className="block text-slate-400 text-2xs mb-1">Tanggal Proses *</label>
               <input
                 required
                 type="date"
                 value={formData.date}
                 onChange={e => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-sky-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-sky-500"
               />
             </div>
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Operator / Regu Cuci</label>
+              <label className="block text-slate-400 text-2xs mb-1">Regu / Operator</label>
               <input
                 type="text"
                 value={formData.operator}
                 onChange={e => setFormData({ ...formData, operator: e.target.value })}
-                placeholder="Regu Shift 1"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-sky-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-sky-500"
               />
             </div>
           </div>
 
-          {/* Source Reject Selection */}
-          <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
-            <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider block">
-              1. Ambil Bahan Baku Reject dari Gudang Kotor
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-              <div className="sm:col-span-2">
-                <label className="block text-slate-400 text-2xs mb-1">Pilih Lot Reject Kotor *</label>
-                <select
-                  required
-                  value={formData.rawPurchaseId}
-                  onChange={e => handleRawChange(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-sky-500"
-                >
-                  {availableRawLots.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.batchNo} - {r.polymerName} (Sisa: {formatNumber(r.remainingKg, 0)} Kg @ {formatRupiah(r.pricePerKg)})
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Raw Material Inbound Selector */}
+          <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="block text-slate-300 font-bold text-2xs">
+                Pilih Batch Limbah Reject dari Gudang Bahan Kotor *
+              </label>
+              {selectedRaw && (
+                <span className="text-2xs text-emerald-400 font-mono">
+                  Sisa Stok: {formatWeight(maxAvailableRawKg)} @ {formatRupiah(selectedRaw.pricePerKg)}
+                </span>
+              )}
+            </div>
 
+            <select
+              required
+              value={formData.rawPurchaseId}
+              onChange={e => handleRawChange(e.target.value)}
+              className="w-full bg-slate-900 border border-emerald-500/50 rounded px-2.5 py-1.5 text-white text-xs font-mono font-medium focus:outline-hidden"
+            >
+              <option value="">-- Pilih Batch Reject --</option>
+              {availableRawLots.map(r => (
+                <option key={r.id} value={r.id}>
+                  {r.batchNo} - {r.polymerCode} ({r.form} • {r.colorBase}) | Sisa: {formatNumber(r.remainingKg, 0)} Kg
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Flakes Output Info */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-400 text-2xs mb-1">Kode Batch Flakes Bersih *</label>
+              <input
+                required
+                type="text"
+                value={formData.outputFlakesBatchNo}
+                onChange={e => setFormData({ ...formData, outputFlakesBatchNo: e.target.value.toUpperCase() })}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-purple-400 font-mono font-bold uppercase text-xs focus:outline-hidden"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 text-2xs mb-1">Nama Deskripsi Flakes *</label>
+              <input
+                required
+                type="text"
+                value={formData.flakesName}
+                onChange={e => setFormData({ ...formData, flakesName: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium text-xs focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-400 text-2xs mb-1">Metode & Jalur Pencucian</label>
+              <input
+                type="text"
+                value={formData.method}
+                onChange={e => setFormData({ ...formData, method: e.target.value })}
+                placeholder="Misal: Wet Washing + Centrifugal Dryer"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-400 text-2xs mb-1">Warna Cacahan Flakes</label>
+              <input
+                type="text"
+                value={formData.flakesColor}
+                onChange={e => setFormData({ ...formData, flakesColor: e.target.value })}
+                placeholder="Misal: Bening Transparan / Abu / Hitam"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden"
+              />
+            </div>
+          </div>
+
+          {/* Timbangan Masuk vs Hasil Timbangan Flakes */}
+          <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2.5 font-mono">
+            <span className="text-2xs font-bold text-slate-300 uppercase tracking-wider block font-sans">
+              Timbangan Hasil & Rekalibrasi HPP Flakes
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-slate-400 text-2xs mb-1">Berat Masuk Giling (Kg) *</label>
+                <label className="block text-slate-400 font-sans text-2xs mb-1">Berat Masuk Giling (Kg) *</label>
                 <input
                   required
                   type="number"
                   min="1"
                   step="0.1"
                   value={formData.rawUsedKg}
-                  onChange={e => setFormData({ ...formData, rawUsedKg: Number(e.target.value) })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-right text-sm font-bold focus:outline-hidden focus:border-sky-500"
+                  onChange={e => setFormData({ ...formData, rawUsedKg: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-right text-xs focus:outline-hidden"
                 />
+                {isRawExceeded && (
+                  <span className="text-3xs text-rose-400 font-sans block mt-0.5 font-bold">
+                    ⚠️ Melebihi stok kotor ({maxAvailableRawKg} Kg)!
+                  </span>
+                )}
               </div>
-            </div>
 
-            {rawUsed > maxAvailableRawKg && (
-              <p className="text-2xs text-rose-400 font-semibold">
-                ⚠️ Jumlah input ({rawUsed} Kg) melebihi sisa stok lot reject ({formatNumber(maxAvailableRawKg, 1)} Kg).
-              </p>
-            )}
-          </div>
-
-          {/* Process Method & Output */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-slate-400 font-medium mb-1">Metode Pengolahan</label>
-              <select
-                value={formData.method}
-                onChange={e => setFormData({ ...formData, method: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-sky-500"
-              >
-                <option value="Wet Grinding + Hot Wash + Spin Drying">Wet Grinding + Wash + Spin Dryer</option>
-                <option value="Crushing + Float-Sink Wash Tank + Dryer">Crushing + Bak Apung Sink + Dryer</option>
-                <option value="Dry Grinding Direct (Tanpa Cuci Air)">Dry Grinding Direct (Tanpa Cuci)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-slate-400 font-medium mb-1">Batch Flakes Dihasilkan *</label>
-              <input
-                required
-                type="text"
-                value={formData.outputFlakesBatchNo}
-                onChange={e => setFormData({ ...formData, outputFlakesBatchNo: e.target.value.toUpperCase() })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-purple-400 font-mono uppercase font-bold focus:outline-hidden focus:border-purple-500"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-400 font-medium mb-1">Nama Produk Cacahan Flakes</label>
-              <input
-                type="text"
-                value={formData.flakesName}
-                onChange={e => setFormData({ ...formData, flakesName: e.target.value })}
-                placeholder="Cacahan Flakes PP Bersih"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-sky-500"
-              />
-            </div>
-          </div>
-
-          {/* Output Timbangan Flakes & Susut */}
-          <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-2.5 font-mono">
-            <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider block font-sans">
-              2. Timbangan Nyata Flakes Kering & Biaya Proses Cuci
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <div className="flex justify-between items-center mb-1 font-sans">
-                  <label className="text-slate-400 text-2xs">Hasil Flakes Bersih (Kg) *</label>
-                  {rawUsed > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, outputFlakesKg: Math.round(rawUsed * 0.94) }))}
-                      className="text-2xs text-sky-400 hover:text-sky-300 underline"
-                      title="Set timbangan estimasi susut cuci 6%"
-                    >
-                      Susut 6% ({Math.round(rawUsed * 0.94)} Kg)
-                    </button>
-                  )}
-                </div>
+                <label className="block text-emerald-400 font-sans text-2xs font-bold mb-1">
+                  Hasil Flakes Kering (Output Kg) *
+                </label>
                 <input
                   required
                   type="number"
                   min="0.1"
                   step="0.1"
                   value={formData.outputFlakesKg}
-                  onChange={e => setFormData({ ...formData, outputFlakesKg: Number(e.target.value) })}
-                  className="w-full bg-slate-900 border border-sky-500 rounded px-2.5 py-1.5 text-emerald-400 font-bold text-base text-right focus:outline-hidden"
+                  onChange={e => setFormData({ ...formData, outputFlakesKg: e.target.value })}
+                  className="w-full bg-slate-900 border border-emerald-500 rounded px-2 py-1 text-emerald-400 font-bold text-right text-sm focus:outline-hidden"
                 />
+                {isOutputExceeded && (
+                  <span className="text-3xs text-rose-400 font-sans block mt-0.5 font-bold">
+                    ⚠️ Output melebihi bahan masuk!
+                  </span>
+                )}
               </div>
 
               <div>
-                <label className="block text-slate-400 font-sans text-2xs mb-1">Tarif Biaya Cuci/Giling (Rp/Kg)</label>
+                <label className="block text-slate-400 font-sans text-2xs mb-1">Tarif Olah Cuci (Rp/Kg)</label>
                 <input
                   type="number"
                   min="0"
                   step="50"
                   value={formData.processCostRatePerKg}
-                  onChange={e => setFormData({ ...formData, processCostRatePerKg: Number(e.target.value) })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white text-right text-sm focus:outline-hidden"
+                  onChange={e => setFormData({ ...formData, processCostRatePerKg: e.target.value })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-right text-xs focus:outline-hidden"
                 />
-                <span className="text-2xs text-slate-400 block text-right mt-0.5">
-                  Biaya Cuci: {formatRupiah(totalProcessCost)}
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-sans text-2xs mb-1">Status Proses</label>
-                <select
-                  value={formData.status}
-                  onChange={e => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white font-sans focus:outline-hidden"
-                >
-                  <option value="Selesai">Selesai (Siap Blending)</option>
-                  <option value="Sedang Cuci/Giling">Sedang Cuci/Giling</option>
-                </select>
               </div>
             </div>
 
-            {/* Calculations Card */}
+            {/* Calculations Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-800 text-xs">
               <div>
-                <span className="text-2xs text-slate-400 block font-sans">Kotoran/Sampah Dibuang:</span>
+                <span className="text-2xs text-slate-400 block font-sans">Susut Lumpur / Label:</span>
                 <span className="font-bold text-rose-400">-{formatWeight(wasteKg)}</span>
-                <span className="text-2xs text-slate-400 block">({formatPercent(wastePct)})</span>
+                <span className="text-3xs text-slate-500 block">({formatPercent(wastePct)})</span>
               </div>
               <div>
                 <span className="text-2xs text-slate-400 block font-sans">Total Nilai Bahan Kotor:</span>
-                <span className="font-bold text-white">{formatRupiah(rawCost)}</span>
+                <span className="font-bold text-white">{formatRupiah(rawMaterialCost)}</span>
               </div>
               <div>
-                <span className="text-2xs text-slate-400 block font-sans">Total Beban Tahap 2:</span>
-                <span className="font-bold text-amber-300">{formatRupiah(totalStageCost)}</span>
+                <span className="text-2xs text-slate-400 block font-sans">Total Biaya Cuci:</span>
+                <span className="font-bold text-amber-300">{formatRupiah(totalProcessCost)}</span>
               </div>
               <div className="border-l border-slate-800 pl-2">
-                <span className="text-2xs text-sky-400 block font-sans font-bold">HPP Flakes / Kg:</span>
+                <span className="text-2xs text-sky-400 font-sans font-bold block">HPP Flakes / Kg:</span>
                 <span className="font-black text-sky-400 text-sm">{formatRupiah(hppFlakes)}</span>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between items-center pt-2 border-t border-slate-800">
-            <span className="text-2xs text-slate-500">
-              * Flakes yang selesai otomatis masuk ke Gudang Cacahan Bersih dan siap diambil di Tahap 3 (SPK Ekstrusi).
-            </span>
-            <div className="flex space-x-2">
-              <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">Batal</button>
-              <button type="submit" className="px-4 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-white font-semibold">Simpan Hasil Flakes</button>
-            </div>
+          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">Batal</button>
+            <button type="submit" className="px-4 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-white font-semibold">Simpan Proses Flakes</button>
           </div>
         </form>
       </div>

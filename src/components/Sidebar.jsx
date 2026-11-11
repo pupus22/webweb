@@ -178,14 +178,14 @@ export default function Sidebar({
 
               {!isCollapsed && (
                 <div className="flex-1 min-w-0 flex items-center justify-between">
-                  <div className="truncate">
-                    <div className="text-xs truncate">{item.label}</div>
-                    <div className="text-3xs text-slate-400 truncate group-hover:text-slate-300">
+                  <div className="flex-1 min-w-0 pr-1">
+                    <div className="text-xs font-semibold leading-snug">{item.label}</div>
+                    <div className="text-3xs text-slate-400 leading-tight mt-0.5 group-hover:text-slate-300">
                       {item.description}
                     </div>
                   </div>
                   {item.badge && (
-                    <span className={`ml-1.5 px-1.5 py-0.2 rounded-full text-3xs font-mono font-bold shrink-0 ${item.badgeColor}`}>
+                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-3xs font-mono font-bold shrink-0 ${item.badgeColor}`}>
                       {item.badge}
                     </span>
                   )}
@@ -214,7 +214,7 @@ export default function Sidebar({
       {/* Desktop Persistent Sidebar (lg:) */}
       <aside
         className={`hidden lg:flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-200 shrink-0 select-none ${
-          isCollapsed ? 'w-16' : 'w-64'
+          isCollapsed ? 'w-16' : 'w-72'
         }`}
       >
         {navContent}

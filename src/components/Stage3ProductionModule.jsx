@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Pencil,
@@ -12,6 +12,8 @@ import {
   AlertCircle,
   Clock,
   CheckCircle2,
+  Bookmark,
+  GitBranch,
   X
 } from 'lucide-react';
 import {
@@ -23,23 +25,90 @@ import {
   getStatusBadge
 } from '../utils/formatters';
 
+const RECIPE_TEMPLATES = [
+  {
+    id: 'TPL-PP-BLK',
+    title: 'Formula PP Hitam Injeksi (95% Flakes PP + 3% MB Hitam + 2% CaCO3)',
+    productName: 'Pelet Biji Plastik PP Compounding Injeksi Super',
+    polymerType: 'PP',
+    targetColor: 'Hitam Doff Mengkilap',
+    mesh: 'Mesh 80 Ganda',
+    temp: 'Zone 1: 185°C | Zone 2: 205°C | Zone 3: 220°C | Die: 215°C',
+    makeIngredients: (flakesList, additives) => {
+      const flk = flakesList.find(f => f.polymerCode === 'PP') || flakesList[0];
+      const mb = additives.find(a => a.code === 'MB-BLK') || additives[0];
+      const ca = additives.find(a => a.code === 'FIL-CA') || additives[1] || additives[0];
+      return [
+        { sourceType: 'flakes', sourceId: flk?.id, batchCode: flk?.outputFlakesBatchNo, materialName: flk?.flakesName || 'Flakes PP Bersih', weightKg: 950, unitCost: flk?.hppFlakesPerKg || 10200 },
+        { sourceType: 'additive', sourceId: mb?.id, batchCode: mb?.code, materialName: mb?.name || 'Masterbatch Hitam', weightKg: 30, unitCost: mb?.unitPrice || 24000 },
+        { sourceType: 'additive', sourceId: ca?.id, batchCode: ca?.code, materialName: ca?.name || 'Filler CaCO3 Kalsium', weightKg: 20, unitCost: ca?.unitPrice || 6500 }
+      ];
+    }
+  },
+  {
+    id: 'TPL-HD-BLW',
+    title: 'Formula HDPE Blow Jerigen (98% Flakes HDPE + 2% MB Pewarna)',
+    productName: 'Pelet Biji Plastik HDPE Blow Molding Jerigen Super',
+    polymerType: 'HDPE',
+    targetColor: 'Abu Semen / Natural',
+    mesh: 'Mesh 80 + 100',
+    temp: 'Zone 1: 175°C | Zone 2: 195°C | Zone 3: 210°C | Die: 205°C',
+    makeIngredients: (flakesList, additives) => {
+      const flk = flakesList.find(f => f.polymerCode === 'HDPE') || flakesList[0];
+      const mb = additives.find(a => a.code === 'MB-BLU') || additives[0];
+      return [
+        { sourceType: 'flakes', sourceId: flk?.id, batchCode: flk?.outputFlakesBatchNo, materialName: flk?.flakesName || 'Flakes HDPE Bersih', weightKg: 980, unitCost: flk?.hppFlakesPerKg || 10800 },
+        { sourceType: 'additive', sourceId: mb?.id, batchCode: mb?.code, materialName: mb?.name || 'Masterbatch Biru/Abu', weightKg: 20, unitCost: mb?.unitPrice || 28000 }
+      ];
+    }
+  },
+  {
+    id: 'TPL-LD-FLM',
+    title: 'Formula LDPE Film Bening (97% Flakes LDPE + 3% Optical Brightener)',
+    productName: 'Pelet Biji Plastik LDPE Bening Super Film / Daun',
+    polymerType: 'LDPE',
+    targetColor: 'Bening Transparan Glossy',
+    mesh: 'Mesh 100 Ganda',
+    temp: 'Zone 1: 165°C | Zone 2: 180°C | Zone 3: 195°C | Die: 190°C',
+    makeIngredients: (flakesList, additives) => {
+      const flk = flakesList.find(f => f.polymerCode === 'LDPE') || flakesList[0];
+      const ob = additives.find(a => a.code === 'ADT-OB') || additives[0];
+      return [
+        { sourceType: 'flakes', sourceId: flk?.id, batchCode: flk?.outputFlakesBatchNo, materialName: flk?.flakesName || 'Flakes LDPE Bening', weightKg: 970, unitCost: flk?.hppFlakesPerKg || 11500 },
+        { sourceType: 'additive', sourceId: ob?.id, batchCode: ob?.code, materialName: ob?.name || 'Optical Brightener (OB-1)', weightKg: 30, unitCost: ob?.unitPrice || 35000 }
+      ];
+    }
+  }
+];
+
 export default function Stage3ProductionModule({
-  recalibratedProductionSPKs,
+  recalibratedProductionSPKs = [],
   setProductionSPKs,
-  recalibratedPreProcessings,
-  additives,
-  costTariffs,
-  onRequestDelete
+  recalibratedPreProcessings = [],
+  additives = [],
+  costTariffs = {},
+  onRequestDelete,
+  onOpenTraceability,
+  initialFlakesBatchId = null,
+  onClearInitialFlakesBatchId
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [modeFilter, setModeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [modalState, setModalState] = useState({ isOpen: false, item: null });
+  const [modalState, setModalState] = useState({ isOpen: false, item: null, preselectedFlakesId: null });
   const [weighingModalState, setWeighingModalState] = useState({ isOpen: false, item: null });
+
+  // Handle fast-workflow auto open if triggered from Stage 2
+  useEffect(() => {
+    if (initialFlakesBatchId) {
+      setModalState({ isOpen: true, item: null, preselectedFlakesId: initialFlakesBatchId });
+      if (onClearInitialFlakesBatchId) onClearInitialFlakesBatchId();
+    }
+  }, [initialFlakesBatchId, onClearInitialFlakesBatchId]);
 
   // Filter available flakes batches with stock > 0
   const availableFlakesBatches = recalibratedPreProcessings.filter(
-    p => p.remainingFlakesKg > 0 || (modalState.item && modalState.item.ingredients?.some(i => i.sourceId === p.id))
+    p => p.remainingFlakesKg > 0 || (modalState.item && modalState.item.ingredients?.some(i => i.sourceId === p.id)) || (modalState.preselectedFlakesId === p.id)
   );
 
   const handleSave = (formData) => {
@@ -55,7 +124,7 @@ export default function Stage3ProductionModule({
         ...prev
       ]);
     }
-    setModalState({ isOpen: false, item: null });
+    setModalState({ isOpen: false, item: null, preselectedFlakesId: null });
   };
 
   const handleSaveWeighing = (spkId, weighingData) => {
@@ -102,7 +171,7 @@ export default function Stage3ProductionModule({
     <div className="space-y-3">
       {/* Top Filter and Actions */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex flex-col md:flex-row items-center justify-between gap-2 text-xs">
-        <div className="flex items-center space-x-2 w-full md:w-auto">
+        <div className="flex items-center space-x-2 w-full md:w-auto flex-wrap">
           <div className="relative flex-1 md:w-64">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
@@ -110,14 +179,14 @@ export default function Stage3ProductionModule({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari SPK, Lot, Produk, Mesin..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-md pl-8 pr-2.5 py-1.5 text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500"
+              className="w-full bg-slate-950 border border-slate-700 rounded-md pl-8 pr-2.5 py-1.5 text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500 text-xs"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1.5 text-white focus:outline-hidden focus:border-purple-500"
+            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1.5 text-white focus:outline-hidden focus:border-purple-500 text-xs"
           >
             <option value="ALL">Semua Status SPK</option>
             <option value="Dalam Proses">⏳ Dalam Proses (Sedang Jalan)</option>
@@ -127,7 +196,7 @@ export default function Stage3ProductionModule({
           <select
             value={modeFilter}
             onChange={(e) => setModeFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1.5 text-white focus:outline-hidden focus:border-purple-500"
+            className="bg-slate-950 border border-slate-700 rounded-md px-2 py-1.5 text-white focus:outline-hidden focus:border-purple-500 text-xs"
           >
             <option value="ALL">Semua Mode</option>
             <option value="single">Single Flakes</option>
@@ -137,8 +206,8 @@ export default function Stage3ProductionModule({
 
         <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
           <button
-            onClick={() => setModalState({ isOpen: true, item: null })}
-            className="flex items-center space-x-1.5 px-3 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 bg-purple-600 hover:bg-purple-500 text-white rounded-md font-semibold transition"
+            onClick={() => setModalState({ isOpen: true, item: null, preselectedFlakesId: null })}
+            className="flex items-center space-x-1.5 px-3 py-2 sm:py-1.5 min-h-[40px] sm:min-h-0 bg-purple-600 hover:bg-purple-500 text-white rounded-md font-semibold transition text-xs w-full sm:w-auto justify-center"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>+ Terbitkan SPK Blending Baru</span>
@@ -147,7 +216,7 @@ export default function Stage3ProductionModule({
       </div>
 
       {/* Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden text-xs">
         <div className="p-3 bg-slate-950/60 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
@@ -155,29 +224,29 @@ export default function Stage3ProductionModule({
               <span>Tahap 3: Formulasi Blending & Ekstrusi Pelletizing (Compounding)</span>
             </h3>
             <p className="text-2xs text-slate-400">
-              Mencampur bahan baku sesuai resep, dilelehkan di ekstruder berfilter kasa, kemudian ditimbang hasil akhirnya.
+              Formulasi resep multi-bahan masuk hopper ekstruder berfilter kasa kawat, dicetak & ditimbang pelet bersihnya.
             </p>
           </div>
           <div className="text-right font-mono text-xs">
-            <span className="text-2xs text-slate-400 block">Total SPK:</span>
+            <span className="text-2xs text-slate-400 block">Total SPK Terbit:</span>
             <span className="text-sm font-bold text-purple-400">{recalibratedProductionSPKs.length} Work Orders</span>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse font-sans">
+          <table className="w-full text-left border-collapse font-sans min-w-[1100px]">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-2xs uppercase tracking-wider">
                 <th className="py-2.5 px-3">No. SPK & Lot</th>
                 <th className="py-2.5 px-3">Target Produk & Warna</th>
                 <th className="py-2.5 px-3">Formulasi Resep Masuk</th>
                 <th className="py-2.5 px-3">Parameter Mesin Extruder</th>
-                <th className="py-2.5 px-3 text-right">Input Bahan (Kg)</th>
+                <th className="py-2.5 px-3 text-right">Input Bahan</th>
                 <th className="py-2.5 px-3 text-right">Output Pelet (Kg)</th>
                 <th className="py-2.5 px-3 text-right">Kerak / Purging</th>
                 <th className="py-2.5 px-3 text-right">HPP Final / Kg</th>
                 <th className="py-2.5 px-3 text-center">Status Produksi</th>
-                <th className="py-2.5 px-3 text-center w-28 sticky right-0 bg-slate-900 shadow-md">Aksi</th>
+                <th className="py-2.5 px-3 text-center sticky right-0 bg-slate-900 shadow-md">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -187,25 +256,36 @@ export default function Stage3ProductionModule({
                 return (
                   <tr key={spk.id} className="hover:bg-slate-800/40 transition">
                     <td className="py-2.5 px-3">
-                      <span className="font-bold text-purple-400 block">{spk.spkNo}</span>
-                      <span className="text-2xs text-white block">{spk.targetLotNo}</span>
-                      <span className="text-2xs text-slate-500 font-sans">{formatDate(spk.date)}</span>
+                      <button
+                        onClick={() => onOpenTraceability && onOpenTraceability(spk.spkNo)}
+                        className="font-bold text-purple-400 hover:text-purple-300 underline font-mono text-left flex items-center space-x-1"
+                        title="Lacak silsilah bahan & resep SPK ini"
+                      >
+                        <span>{spk.spkNo}</span>
+                        <GitBranch className="w-3 h-3 opacity-60" />
+                      </button>
+                      <button
+                        onClick={() => onOpenTraceability && onOpenTraceability(spk.targetLotNo)}
+                        className="text-2xs text-amber-300 font-mono hover:underline block text-left"
+                        title="Lacak lot ini"
+                      >
+                        {spk.targetLotNo}
+                      </button>
+                      <span className="text-2xs text-slate-400 font-sans block">{formatDate(spk.date)}</span>
                     </td>
 
                     <td className="py-2.5 px-3 font-sans">
-                      <span className="font-semibold text-white block truncate max-w-[200px]" title={spk.targetProductName}>
-                        {spk.targetProductName}
-                      </span>
-                      <span className="text-2xs text-slate-400">
+                      <span className="font-semibold text-white block leading-snug">{spk.targetProductName}</span>
+                      <span className="text-2xs text-slate-400 block mt-0.5">
                         {spk.polymerType} • {spk.targetColor}
                       </span>
                     </td>
 
                     <td className="py-2.5 px-3 font-sans">
-                      <div className="text-2xs space-y-0.5 max-w-[200px]">
+                      <div className="text-2xs space-y-0.5 max-w-[220px]">
                         {(spk.ingredients || []).map((ing, idx) => (
-                          <div key={idx} className="flex justify-between text-slate-300">
-                            <span className="truncate pr-1 text-slate-400">{ing.materialName}</span>
+                          <div key={idx} className="flex justify-between text-slate-300 border-b border-slate-800/40 pb-0.5">
+                            <span className="pr-1 text-slate-400">{ing.materialName}</span>
                             <span className="font-mono text-emerald-400 whitespace-nowrap">{formatNumber(ing.weightKg, 0)} Kg</span>
                           </div>
                         ))}
@@ -288,7 +368,7 @@ export default function Stage3ProductionModule({
                       )}
                     </td>
 
-                    <td className="py-2.5 px-3 text-center sticky right-0 bg-slate-900 shadow-md">
+                    <td className="py-2.5 px-3 text-center sticky right-0 bg-slate-900 shadow-md font-sans">
                       <div className="flex items-center justify-center space-x-1">
                         {isOngoing && (
                           <button
@@ -300,7 +380,7 @@ export default function Stage3ProductionModule({
                           </button>
                         )}
                         <button
-                          onClick={() => setModalState({ isOpen: true, item: spk })}
+                          onClick={() => setModalState({ isOpen: true, item: spk, preselectedFlakesId: null })}
                           className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
                           title="Edit SPK / Koreksi Resep Formulasi"
                         >
@@ -334,15 +414,16 @@ export default function Stage3ProductionModule({
         </div>
       </div>
 
-      {/* Modal Form: Full SPK Formulation */}
+      {/* Modal Form: Full SPK Formulation with Visual Recipe Simulator */}
       {modalState.isOpen && (
         <ProductionSPKFormModal
           item={modalState.item}
           availableFlakesBatches={availableFlakesBatches}
+          preselectedFlakesId={modalState.preselectedFlakesId}
           additives={additives}
           defaultExtrusionRate={costTariffs.extrusionRatePerKg}
           onSave={handleSave}
-          onClose={() => setModalState({ isOpen: false, item: null })}
+          onClose={() => setModalState({ isOpen: false, item: null, preselectedFlakesId: null })}
         />
       )}
 
@@ -359,9 +440,9 @@ export default function Stage3ProductionModule({
 }
 
 // -------------------------------------------------------------
-// Sub-Modal: Production SPK Form (Blending & Extrusion)
+// Sub-Modal: Production SPK Form (Blending & Extrusion with Recipe Templates)
 // -------------------------------------------------------------
-function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defaultExtrusionRate, onSave, onClose }) {
+function ProductionSPKFormModal({ item, availableFlakesBatches = [], preselectedFlakesId = null, additives = [], defaultExtrusionRate = 1850, onSave, onClose }) {
   const today = new Date().toISOString().slice(0, 10);
   const dateCode = today.replace(/-/g, '').slice(2);
   const defaultSpk = `SPK-${dateCode}-${String(Date.now()).slice(-3)}`;
@@ -380,7 +461,7 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
     meshScreenSize: item?.meshScreenSize || 'Mesh 80 Ganda',
     cuttingMethod: item?.cuttingMethod || 'Strand Pelletizing (Tarik Untaian + Pisau Rotari)',
     operator: item?.operator || 'Regu Shift 1',
-    status: item?.status || 'Dalam Proses', // Default to 'Dalam Proses' so weighing can be done after extrusion
+    status: item?.status || 'Dalam Proses',
     extrusionRatePerKg: item?.extrusionRatePerKg !== undefined ? item.extrusionRatePerKg : defaultExtrusionRate,
     outputPelletKg: item?.outputPelletKg !== undefined ? item.outputPelletKg : (item ? 1000 : 0),
     bagWeightKg: item?.bagWeightKg || 25,
@@ -390,7 +471,7 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
   });
 
   // Initial Ingredients Formulation
-  const defaultFlakes = availableFlakesBatches[0];
+  const defaultFlakes = availableFlakesBatches.find(f => f.id === preselectedFlakesId) || availableFlakesBatches[0];
   const initialIngredients = item?.ingredients && item.ingredients.length > 0
     ? item.ingredients.map(i => ({ ...i }))
     : [
@@ -413,6 +494,23 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
       ];
 
   const [ingredients, setIngredients] = useState(initialIngredients);
+
+  // Apply Recipe Template handler
+  const handleApplyTemplate = (templateId) => {
+    const tpl = RECIPE_TEMPLATES.find(t => t.id === templateId);
+    if (!tpl) return;
+
+    const newIngs = tpl.makeIngredients(availableFlakesBatches, additives);
+    setIngredients(newIngs);
+    setFormData(prev => ({
+      ...prev,
+      targetProductName: tpl.productName,
+      polymerType: tpl.polymerType,
+      targetColor: tpl.targetColor,
+      meshScreenSize: tpl.mesh,
+      barrelTempCelsius: tpl.temp
+    }));
+  };
 
   const handleAddIngredient = (type = 'flakes') => {
     if (type === 'flakes') {
@@ -494,6 +592,11 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
   const bagWeight = Number(formData.bagWeightKg) || 25;
   const bagCount = bagWeight > 0 ? Math.floor(outputPelletKg / bagWeight) : 0;
 
+  // Pre-extrusion Estimated HPP (assuming normal 4.5% shrinkage)
+  const estimatedOutputPelletKg = Math.round(totalInputMixKg * 0.955);
+  const estimatedExtrusionCost = estimatedOutputPelletKg * extrusionRate;
+  const estimatedHPP = estimatedOutputPelletKg > 0 ? ((totalMaterialCost + estimatedExtrusionCost) / estimatedOutputPelletKg) : 0;
+
   // Additive check
   const additiveInputs = ingredients.filter(i => i.sourceType === 'additive');
   const totalAdditiveKg = additiveInputs.reduce((acc, i) => acc + (Number(i.weightKg) || 0), 0);
@@ -510,7 +613,7 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
         return;
       }
       if (isOutputExceedingInput) {
-        alert(`Output pelet (${outputPelletKg} Kg) tidak boleh melebihi total input bahan (${totalInputMixKg} Kg)! Hukum kekekalan massa: pelet hasil = input bahan dikurangi susut.`);
+        alert(`Output pelet (${outputPelletKg} Kg) tidak boleh melebihi total input bahan (${totalInputMixKg} Kg)!`);
         return;
       }
     }
@@ -541,9 +644,18 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
     });
   };
 
+  const ingredientColors = [
+    'bg-blue-500',
+    'bg-purple-500',
+    'bg-emerald-500',
+    'bg-amber-500',
+    'bg-rose-500',
+    'bg-cyan-500'
+  ];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-3xl w-full my-6 overflow-hidden text-xs">
+      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-3xl w-full my-6 overflow-hidden text-xs font-sans">
         <div className="flex justify-between items-center px-4 py-3 border-b border-slate-800 bg-slate-950/40">
           <div className="flex items-center space-x-2">
             <Flame className="w-4 h-4 text-purple-400" />
@@ -558,7 +670,7 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
           {/* Status Selection: Ongoing vs Completed */}
           <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div>
-              <span className="text-2xs font-bold text-slate-300 uppercase tracking-wider block font-sans">
+              <span className="text-2xs font-bold text-slate-300 uppercase tracking-wider block">
                 Status Alur SPK Pabrik *
               </span>
               <p className="text-3xs text-slate-400">
@@ -594,93 +706,91 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
             </div>
           </div>
 
-          {/* Mode Switcher */}
-          <div className="flex items-center space-x-2 p-1.5 bg-slate-950 rounded-lg border border-slate-800">
-            <button
-              type="button"
-              onClick={() => setMode('multi_blend')}
-              className={`flex-1 py-2 px-3 rounded-md font-semibold text-xs transition flex items-center justify-center space-x-1.5 ${
-                mode === 'multi_blend' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Multi-Plastic Blending (Campuran Flakes + Masterbatch / CaCO3)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('single')}
-              className={`flex-1 py-2 px-3 rounded-md font-semibold text-xs transition flex items-center justify-center space-x-1.5 ${
-                mode === 'single' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Single Flakes (100% 1 Jenis Cacahan Murni)</span>
-            </button>
+          {/* Quick Recipe Template Selector */}
+          <div className="p-2.5 rounded-lg bg-purple-950/30 border border-purple-500/40 space-y-1.5">
+            <div className="flex items-center space-x-1.5 text-purple-300 font-bold text-2xs">
+              <Bookmark className="w-3.5 h-3.5" />
+              <span>Gunakan Template Resep Cepat (Pabrik Compounding Standar):</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+              {RECIPE_TEMPLATES.map(tpl => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  onClick={() => handleApplyTemplate(tpl.id)}
+                  className="px-2 py-1.5 rounded bg-slate-900 hover:bg-purple-900/60 border border-purple-500/30 text-slate-200 text-left text-3xs transition truncate"
+                  title={tpl.title}
+                >
+                  <strong className="text-purple-300 block truncate">{tpl.polymerType} - {tpl.targetColor}</strong>
+                  <span className="text-slate-400 truncate block">{tpl.productName}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* SPK Header & Lot */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <label className="block text-slate-400 font-medium mb-1">No. SPK *</label>
+              <label className="block text-slate-400 font-medium mb-1 text-2xs">No. SPK *</label>
               <input
                 required
                 type="text"
                 value={formData.spkNo}
                 onChange={e => setFormData({ ...formData, spkNo: e.target.value.toUpperCase() })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono uppercase focus:outline-hidden focus:border-purple-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono uppercase text-xs focus:outline-hidden focus:border-purple-500"
               />
             </div>
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Kode Lot Pelet Jadi *</label>
+              <label className="block text-slate-400 font-medium mb-1 text-2xs">Kode Lot Pelet Jadi *</label>
               <input
                 required
                 type="text"
                 value={formData.targetLotNo}
                 onChange={e => setFormData({ ...formData, targetLotNo: e.target.value.toUpperCase() })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-purple-400 font-mono font-bold uppercase focus:outline-hidden focus:border-purple-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-purple-400 font-mono font-bold uppercase text-xs focus:outline-hidden focus:border-purple-500"
               />
             </div>
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Tanggal *</label>
+              <label className="block text-slate-400 font-medium mb-1 text-2xs">Tanggal *</label>
               <input
                 required
                 type="date"
                 value={formData.date}
                 onChange={e => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-purple-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-purple-500"
               />
             </div>
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Mesin / Line Ekstruder</label>
+              <label className="block text-slate-400 font-medium mb-1 text-2xs">Mesin / Line Ekstruder</label>
               <input
                 type="text"
                 value={formData.extruderLine}
                 onChange={e => setFormData({ ...formData, extruderLine: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-purple-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-purple-500"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
-              <label className="block text-slate-400 font-medium mb-1">Target Nama Biji Plastik *</label>
+              <label className="block text-slate-400 font-medium mb-1 text-2xs">Target Nama Biji Plastik *</label>
               <input
                 required
                 type="text"
                 value={formData.targetProductName}
                 onChange={e => setFormData({ ...formData, targetProductName: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium focus:outline-hidden focus:border-purple-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium text-xs focus:outline-hidden focus:border-purple-500"
               />
             </div>
 
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Target Warna Pelet *</label>
+              <label className="block text-slate-400 font-medium mb-1 text-2xs">Target Warna Pelet *</label>
               <input
                 required
                 type="text"
                 value={formData.targetColor}
                 onChange={e => setFormData({ ...formData, targetColor: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-purple-500"
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-purple-500"
               />
             </div>
           </div>
@@ -689,34 +799,70 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
           <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-2.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-800 pb-2">
               <div>
-                <span className="text-2xs font-bold text-slate-300 uppercase tracking-wider block font-sans">
+                <span className="text-2xs font-bold text-slate-300 uppercase tracking-wider block">
                   1. Formulasi Resep Bahan Masuk (Input Hopper)
                 </span>
                 <span className="text-3xs text-slate-400">
                   Campuran beberapa jenis cacahan flakes polimer + masterbatch aditif
                 </span>
               </div>
-              {mode === 'multi_blend' && (
-                <div className="flex space-x-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleAddIngredient('flakes')}
-                    className="px-2.5 py-1 rounded bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 text-2xs font-semibold flex items-center space-x-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>+ Tambah Flakes</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAddIngredient('additive')}
-                    className="px-2.5 py-1 rounded bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40 text-2xs font-semibold flex items-center space-x-1"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>+ Tambah Aditif / MB</span>
-                  </button>
-                </div>
-              )}
+              <div className="flex space-x-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleAddIngredient('flakes')}
+                  className="px-2.5 py-1 rounded bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 text-2xs font-semibold flex items-center space-x-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>+ Tambah Flakes</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddIngredient('additive')}
+                  className="px-2.5 py-1 rounded bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40 text-2xs font-semibold flex items-center space-x-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>+ Tambah Aditif / MB</span>
+                </button>
+              </div>
             </div>
+
+            {/* Visual Real-time Formulation Ratio Stacked Progress Bar */}
+            {totalInputMixKg > 0 && (
+              <div className="space-y-1.5 p-2.5 rounded bg-slate-900 border border-slate-800">
+                <div className="flex justify-between items-center text-3xs font-mono">
+                  <span className="text-slate-400 font-sans font-semibold">Distribusi Komposisi Resep (% Rasio):</span>
+                  <span className="text-purple-300 font-bold">Total: {formatWeight(totalInputMixKg)}</span>
+                </div>
+                <div className="w-full h-3 rounded-full bg-slate-950 flex overflow-hidden border border-slate-700">
+                  {ingredients.map((ing, idx) => {
+                    const ratio = totalInputMixKg > 0 ? ((Number(ing.weightKg) || 0) / totalInputMixKg) * 100 : 0;
+                    if (ratio <= 0) return null;
+                    const colorClass = ingredientColors[idx % ingredientColors.length];
+                    return (
+                      <div
+                        key={idx}
+                        style={{ width: `${ratio}%` }}
+                        className={`${colorClass} h-full transition-all duration-300 relative group`}
+                        title={`${ing.materialName}: ${formatPercent(ratio)} (${formatNumber(ing.weightKg, 0)} Kg)`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap gap-2 text-3xs font-mono pt-1">
+                  {ingredients.map((ing, idx) => {
+                    const ratio = totalInputMixKg > 0 ? ((Number(ing.weightKg) || 0) / totalInputMixKg) * 100 : 0;
+                    const colorClass = ingredientColors[idx % ingredientColors.length];
+                    return (
+                      <div key={idx} className="flex items-center space-x-1">
+                        <span className={`w-2 h-2 rounded-full ${colorClass}`}></span>
+                        <span className="text-slate-300">{ing.materialName}:</span>
+                        <strong className="text-white">{formatPercent(ratio)}</strong>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
               {ingredients.map((ing, idx) => {
@@ -807,6 +953,16 @@ function ProductionSPKFormModal({ item, availableFlakesBatches, additives, defau
                 <span className="text-white font-bold">{formatWeight(totalInputMixKg)}</span>
                 <span className="text-emerald-400">{formatRupiah(totalMaterialCost)}</span>
               </div>
+            </div>
+
+            {/* Real-time Estimated HPP Box before run */}
+            <div className="p-2.5 rounded bg-slate-900 border border-slate-800 flex items-center justify-between font-mono text-2xs">
+              <span className="text-slate-400 font-sans">
+                Estimasi HPP Pelet Sebelum Jalan (Susut Est. 4.5%):
+              </span>
+              <span className="text-purple-300 font-bold text-xs">
+                ~ {formatRupiah(estimatedHPP)} / Kg Pelet
+              </span>
             </div>
 
             {isAdditiveRatioHigh && (
