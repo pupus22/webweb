@@ -4,8 +4,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node -e \"const fs = require('fs'); fs.copyFileSync('template.html', 'index.html');\"",
     "dev": "vite",
-    "build": "vite build && node -e \"const fs = require('fs'); fs.copyFileSync('dist/index.html', 'index.html'); fs.cpSync('dist/assets', 'assets', {recursive: true});\"",
+    "prebuild": "node -e \"const fs = require('fs'); fs.copyFileSync('template.html', 'index.html');\"",
+    "build": "vite build",
+    "postbuild": "node -e \"const fs = require('fs'); fs.copyFileSync('dist/index.html', 'index.html'); fs.cpSync('dist/assets', 'assets', {recursive: true});\"",
     "preview": "vite preview"
   },
   "dependencies": {
