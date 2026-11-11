@@ -7,6 +7,9 @@ export function formatRupiah(value) {
   }).format(value);
 }
 
+export const formatRp = formatRupiah;
+export const formatCurrency = formatRupiah;
+
 export function formatNumber(value, decimals = 1) {
   if (value === null || value === undefined || isNaN(value)) return '0';
   return new Intl.NumberFormat('id-ID', {

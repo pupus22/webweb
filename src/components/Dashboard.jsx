@@ -11,7 +11,7 @@ import {
   Flame,
   Scale
 } from 'lucide-react';
-import { formatRupiah, formatWeight, formatPercent, formatDate, getStatusBadge } from '../utils/formatters';
+import { formatRupiah, formatNumber, formatWeight, formatPercent, formatDate, getStatusBadge } from '../utils/formatters';
 
 export default function Dashboard({
   kpis,
