@@ -226,18 +226,20 @@ export function recalculateERP(database) {
     }
   });
 
-  // Build Finished Goods Pellet Inventory List
-  const finishedGoodsPelletInventory = recalibratedProductionSPKs.map(spk => {
-    const lotKey = spk.targetLotNo || spk.spkNo;
-    const soldKg = salesByLotMap.get(lotKey) || 0;
-    const adjustmentKg = adjustmentsByLotMap.get(lotKey) || 0;
-    const currentStockKg = Math.max(0, spk.outputPelletKg + adjustmentKg - soldKg);
-    const totalAssetValue = currentStockKg * spk.hppFinalPelletPerKg;
-    const bagCapacity = Number(spk.bagWeightKg || 25);
-    const availableBags = bagCapacity > 0 ? Math.floor(currentStockKg / bagCapacity) : 0;
-    const sisaKg = currentStockKg % bagCapacity;
+  // Build Finished Goods Pellet Inventory List (Only completed & weighed batches enter stock)
+  const finishedGoodsPelletInventory = recalibratedProductionSPKs
+    .filter(spk => spk.status !== 'Dalam Proses' && Number(spk.outputPelletKg || 0) > 0)
+    .map(spk => {
+      const lotKey = spk.targetLotNo || spk.spkNo;
+      const soldKg = salesByLotMap.get(lotKey) || 0;
+      const adjustmentKg = adjustmentsByLotMap.get(lotKey) || 0;
+      const currentStockKg = Math.max(0, spk.outputPelletKg + adjustmentKg - soldKg);
+      const totalAssetValue = currentStockKg * spk.hppFinalPelletPerKg;
+      const bagCapacity = Number(spk.bagWeightKg || 25);
+      const availableBags = bagCapacity > 0 ? Math.floor(currentStockKg / bagCapacity) : 0;
+      const sisaKg = currentStockKg % bagCapacity;
 
-    const stockStatus = currentStockKg <= 0 ? 'Habis Terjual' : (currentStockKg < 250 ? 'Stok Kritis' : 'Siap Kirim');
+      const stockStatus = currentStockKg <= 0 ? 'Habis Terjual' : (currentStockKg < 250 ? 'Stok Kritis' : 'Siap Kirim');
 
     return {
       lotNo: lotKey,
