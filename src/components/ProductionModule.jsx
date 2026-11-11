@@ -248,7 +248,7 @@ function ProductionFormModal({ item, recalibratedPurchases, plasticTypes, defaul
     machine: item?.machine || 'Extruder Line 1',
     status: item?.status || 'Selesai',
     operationalCostPerKg: item?.operationalCostPerKg !== undefined ? item.operationalCostPerKg : defaultOpCost,
-    outputKg: item?.outputKg !== undefined ? item.outputKg : 1000,
+    outputKg: item?.outputKg !== undefined ? item.outputKg : (item ? 1000 : 0),
     bagWeightKg: item?.bagWeightKg || 25,
     notes: item?.notes || ''
   });
@@ -413,7 +413,7 @@ function ProductionFormModal({ item, recalibratedPurchases, plasticTypes, defaul
           </div>
 
           {/* SPK Header Info */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div>
               <label className="block text-slate-400 font-medium mb-1">No. SPK *</label>
               <input
@@ -425,7 +425,7 @@ function ProductionFormModal({ item, recalibratedPurchases, plasticTypes, defaul
               />
             </div>
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Tanggal Produksi *</label>
+              <label className="block text-slate-400 font-medium mb-1">Tanggal *</label>
               <input
                 type="date"
                 required
@@ -435,24 +435,35 @@ function ProductionFormModal({ item, recalibratedPurchases, plasticTypes, defaul
               />
             </div>
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Mesin / Line Extruder</label>
+              <label className="block text-slate-400 font-medium mb-1">Mesin / Line</label>
               <input
                 type="text"
                 value={formData.machine}
                 onChange={e => setFormData({ ...formData, machine: e.target.value })}
-                placeholder="misal: Extruder Line 1"
+                placeholder="Line 1"
                 className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-amber-500"
               />
             </div>
             <div>
-              <label className="block text-slate-400 font-medium mb-1">Operator / Shift</label>
+              <label className="block text-slate-400 font-medium mb-1">Operator</label>
               <input
                 type="text"
                 value={formData.operator}
                 onChange={e => setFormData({ ...formData, operator: e.target.value })}
-                placeholder="misal: Shift 1 - Joko"
+                placeholder="Shift 1"
                 className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-amber-500"
               />
+            </div>
+            <div>
+              <label className="block text-slate-400 font-medium mb-1">Status SPK</label>
+              <select
+                value={formData.status}
+                onChange={e => setFormData({ ...formData, status: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-amber-500"
+              >
+                <option value="Selesai">Selesai (Sudah Ditimbang)</option>
+                <option value="Dalam Proses">Dalam Proses (Sedang Jalan)</option>
+              </select>
             </div>
           </div>
 
@@ -599,16 +610,34 @@ function ProductionFormModal({ item, recalibratedPurchases, plasticTypes, defaul
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-slate-400 font-medium mb-1">Hasil Biji Plastik Bersih (Output Kg) *</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-slate-400 font-medium">Hasil Biji Plastik (Output Kg) *</label>
+                  {totalInputKg > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, outputKg: Math.round(totalInputKg * 0.95) }))}
+                      className="text-2xs text-sky-400 hover:text-sky-300 underline font-sans"
+                      title="Set timbangan perkiraan susut standar 5%"
+                    >
+                      Estimasi Susut 5% ({Math.round(totalInputKg * 0.95)} Kg)
+                    </button>
+                  )}
+                </div>
                 <input
                   type="number"
                   min="0.1"
                   step="0.1"
                   required
-                  value={formData.outputKg}
+                  placeholder={totalInputKg > 0 ? `Timbang karung sak pelet (misal: ${Math.round(totalInputKg * 0.95)})` : 'Isi hasil timbangan'}
+                  value={formData.outputKg || ''}
                   onChange={e => setFormData({ ...formData, outputKg: Number(e.target.value) })}
                   className="w-full bg-slate-900 border border-emerald-600/50 rounded px-2.5 py-1.5 text-emerald-400 font-mono font-bold text-base text-right focus:outline-hidden focus:border-emerald-500"
                 />
+                {totalInputKg > 0 && formData.outputKg > totalInputKg && (
+                  <p className="text-2xs text-rose-400 font-medium mt-1">
+                    ⚠️ Timbangan hasil ({formData.outputKg} Kg) melebihi bahan masuk ({totalInputKg} Kg). Timbang ulang karung hasil pelet.
+                  </p>
+                )}
               </div>
 
               <div>
