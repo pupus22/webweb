@@ -85,10 +85,10 @@ export default function MasterDataModule({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Subtab selection & Search */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex flex-col md:flex-row items-center justify-between gap-2">
-        <div className="flex items-center space-x-1 overflow-x-auto w-full md:w-auto">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="flex items-center space-x-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
           {subTabs.map(tab => {
             const Icon = tab.icon;
             const active = activeSubTab === tab.id;
@@ -99,15 +99,15 @@ export default function MasterDataModule({
                   setActiveSubTab(tab.id);
                   setSearchQuery('');
                 }}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
                   active
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                    ? 'bg-violet-50 text-violet-700 border border-violet-200 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-3.5 h-3.5 ${active ? 'text-violet-600' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>
-                <span className={`text-2xs px-1.5 py-0.2 rounded-full ${active ? 'bg-emerald-800 text-white' : 'bg-slate-900 text-slate-400'}`}>
+                <span className={`text-3xs px-2 py-0.5 rounded-full font-bold ${active ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
                   {tab.count}
                 </span>
               </button>
@@ -115,16 +115,16 @@ export default function MasterDataModule({
           })}
         </div>
 
-        <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
+        <div className="flex items-center space-x-2.5 w-full md:w-auto justify-end">
           {activeSubTab !== 'tariffs' && (
-            <div className="relative w-full md:w-56">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <div className="relative w-full md:w-64">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari master data..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-md pl-8 pr-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
           )}
@@ -132,7 +132,7 @@ export default function MasterDataModule({
           {activeSubTab === 'polymers' && (
             <button
               onClick={() => setPolymerModal({ isOpen: true, item: null })}
-              className="flex items-center space-x-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-semibold whitespace-nowrap transition"
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-semibold whitespace-nowrap shadow-xs shadow-violet-200 transition"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Tambah Polimer</span>
@@ -142,7 +142,7 @@ export default function MasterDataModule({
           {activeSubTab === 'additives' && (
             <button
               onClick={() => setAdditiveModal({ isOpen: true, item: null })}
-              className="flex items-center space-x-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-semibold whitespace-nowrap transition"
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-semibold whitespace-nowrap shadow-xs shadow-violet-200 transition"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Tambah Aditif</span>
@@ -152,7 +152,7 @@ export default function MasterDataModule({
           {activeSubTab === 'contacts' && (
             <button
               onClick={() => setContactModal({ isOpen: true, item: null })}
-              className="flex items-center space-x-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-semibold whitespace-nowrap transition"
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-semibold whitespace-nowrap shadow-xs shadow-violet-200 transition"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Tambah Kontak</span>
@@ -165,38 +165,42 @@ export default function MasterDataModule({
       {/* 1. POLYMERS TABLE */}
       {/* ------------------------------------------------------------- */}
       {activeSubTab === 'polymers' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse font-sans">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-2xs uppercase">
-                  <th className="py-2.5 px-3">Kode</th>
-                  <th className="py-2.5 px-3">Nama Polimer</th>
-                  <th className="py-2.5 px-3">Kategori</th>
-                  <th className="py-2.5 px-3">MFI Standar</th>
-                  <th className="py-2.5 px-3">Wujud Default</th>
-                  <th className="py-2.5 px-3">Karakter Fisik & Deskripsi</th>
-                  <th className="py-2.5 px-3 text-center w-24">Aksi</th>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-400 text-3xs font-semibold uppercase tracking-wider">
+                  <th className="py-3 px-4">Kode</th>
+                  <th className="py-3 px-4">Nama Polimer</th>
+                  <th className="py-3 px-4">Kategori</th>
+                  <th className="py-3 px-4">MFI Standar</th>
+                  <th className="py-3 px-4">Wujud Default</th>
+                  <th className="py-3 px-4">Karakter Fisik & Deskripsi</th>
+                  <th className="py-3 px-4 text-center w-28">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {polymers
                   .filter(p => `${p.code} ${p.name} ${p.category} ${p.description}`.toLowerCase().includes(searchQuery.toLowerCase()))
                   .map(pol => (
-                    <tr key={pol.id} className="hover:bg-slate-800/40 transition">
-                      <td className="py-2 px-3 font-mono font-bold text-emerald-400">{pol.code}</td>
-                      <td className="py-2 px-3 font-semibold text-white">{pol.name}</td>
-                      <td className="py-2 px-3 text-slate-300">{pol.category}</td>
-                      <td className="py-2 px-3 font-mono text-purple-300">{pol.meltFlowIndex || '-'}</td>
-                      <td className="py-2 px-3 text-slate-300">{pol.defaultForm}</td>
-                      <td className="py-2 px-3 text-slate-400 text-2xs max-w-[260px] truncate" title={pol.description}>
+                    <tr key={pol.id} className="hover:bg-slate-50/60 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-violet-600">{pol.code}</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">{pol.name}</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-0.5 rounded-full text-3xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                          {pol.category}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-slate-700 font-medium">{pol.meltFlowIndex || '-'}</td>
+                      <td className="py-3 px-4 text-slate-600">{pol.defaultForm}</td>
+                      <td className="py-3 px-4 text-slate-500 text-xs max-w-[280px]" title={pol.description}>
                         {pol.description}
                       </td>
-                      <td className="py-2 px-3 text-center">
+                      <td className="py-3 px-4 text-center">
                         <div className="flex items-center justify-center space-x-1.5">
                           <button
                             onClick={() => setPolymerModal({ isOpen: true, item: pol })}
-                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
                             title="Edit Polimer"
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -207,7 +211,7 @@ export default function MasterDataModule({
                               message: `Yakin ingin menghapus ${pol.code} - ${pol.name}?`,
                               onConfirm: () => setPolymers(prev => prev.filter(x => x.id !== pol.id))
                             })}
-                            className="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-rose-200"
+                            className="p-1.5 rounded-lg border border-rose-200 text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition"
                             title="Hapus"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -226,38 +230,42 @@ export default function MasterDataModule({
       {/* 2. ADDITIVES TABLE */}
       {/* ------------------------------------------------------------- */}
       {activeSubTab === 'additives' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse font-sans">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-2xs uppercase">
-                  <th className="py-2.5 px-3">Kode</th>
-                  <th className="py-2.5 px-3">Nama Aditif / Masterbatch</th>
-                  <th className="py-2.5 px-3">Fungsi Formulasi</th>
-                  <th className="py-2.5 px-3 text-right">Harga Beli / Kg</th>
-                  <th className="py-2.5 px-3">Deskripsi</th>
-                  <th className="py-2.5 px-3 text-center w-24">Aksi</th>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-400 text-3xs font-semibold uppercase tracking-wider">
+                  <th className="py-3 px-4">Kode</th>
+                  <th className="py-3 px-4">Nama Aditif / Masterbatch</th>
+                  <th className="py-3 px-4">Fungsi Formulasi</th>
+                  <th className="py-3 px-4 text-right">Harga Beli / Kg</th>
+                  <th className="py-3 px-4">Deskripsi</th>
+                  <th className="py-3 px-4 text-center w-28">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {additives
                   .filter(a => `${a.code} ${a.name} ${a.function} ${a.description}`.toLowerCase().includes(searchQuery.toLowerCase()))
                   .map(adt => (
-                    <tr key={adt.id} className="hover:bg-slate-800/40 transition">
-                      <td className="py-2 px-3 font-mono font-bold text-purple-400">{adt.code}</td>
-                      <td className="py-2 px-3 font-semibold text-white">{adt.name}</td>
-                      <td className="py-2 px-3 text-slate-300">{adt.function}</td>
-                      <td className="py-2 px-3 text-right font-mono font-bold text-emerald-400">
+                    <tr key={adt.id} className="hover:bg-slate-50/60 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-violet-600">{adt.code}</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">{adt.name}</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-0.5 rounded-full text-3xs font-semibold bg-violet-50 text-violet-700 border border-violet-100">
+                          {adt.function}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600">
                         {formatRupiah(adt.unitPrice)}
                       </td>
-                      <td className="py-2 px-3 text-slate-400 text-2xs max-w-[280px] truncate" title={adt.description}>
+                      <td className="py-3 px-4 text-slate-500 text-xs max-w-[280px]" title={adt.description}>
                         {adt.description}
                       </td>
-                      <td className="py-2 px-3 text-center">
+                      <td className="py-3 px-4 text-center">
                         <div className="flex items-center justify-center space-x-1.5">
                           <button
                             onClick={() => setAdditiveModal({ isOpen: true, item: adt })}
-                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
                             title="Edit Aditif"
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -268,7 +276,7 @@ export default function MasterDataModule({
                               message: `Yakin ingin menghapus ${adt.name}?`,
                               onConfirm: () => setAdditives(prev => prev.filter(x => x.id !== adt.id))
                             })}
-                            className="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-rose-200"
+                            className="p-1.5 rounded-lg border border-rose-200 text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition"
                             title="Hapus"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -287,52 +295,52 @@ export default function MasterDataModule({
       {/* 3. CONTACTS TABLE */}
       {/* ------------------------------------------------------------- */}
       {activeSubTab === 'contacts' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse font-sans">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-2xs uppercase">
-                  <th className="py-2.5 px-3">Kode & Nama Kontak</th>
-                  <th className="py-2.5 px-3">Tipe</th>
-                  <th className="py-2.5 px-3">PIC & Telepon</th>
-                  <th className="py-2.5 px-3">Alamat Pabrik / Lapak</th>
-                  <th className="py-2.5 px-3">Catatan Spesifikasi MFI / Warna</th>
-                  <th className="py-2.5 px-3 text-center w-24">Aksi</th>
+                <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-400 text-3xs font-semibold uppercase tracking-wider">
+                  <th className="py-3 px-4">Kode & Nama Kontak</th>
+                  <th className="py-3 px-4">Tipe</th>
+                  <th className="py-3 px-4">PIC & Telepon</th>
+                  <th className="py-3 px-4">Alamat Pabrik / Lapak</th>
+                  <th className="py-3 px-4">Catatan Spesifikasi MFI / Warna</th>
+                  <th className="py-3 px-4 text-center w-28">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {contacts
                   .filter(c => `${c.code} ${c.name} ${c.type} ${c.pic} ${c.address} ${c.specNotes}`.toLowerCase().includes(searchQuery.toLowerCase()))
                   .map(cnt => (
-                    <tr key={cnt.id} className="hover:bg-slate-800/40 transition">
-                      <td className="py-2 px-3">
-                        <span className="font-mono text-2xs text-slate-400 block">{cnt.code}</span>
-                        <span className="font-semibold text-white">{cnt.name}</span>
+                    <tr key={cnt.id} className="hover:bg-slate-50/60 transition">
+                      <td className="py-3 px-4">
+                        <span className="font-mono text-3xs text-slate-400 block">{cnt.code}</span>
+                        <span className="font-semibold text-slate-800">{cnt.name}</span>
                       </td>
-                      <td className="py-2 px-3">
-                        <span className={`px-2 py-0.5 rounded text-2xs font-bold uppercase ${
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded-full text-3xs font-semibold ${
                           cnt.type === 'supplier'
-                            ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                            : 'bg-sky-950 text-sky-300 border border-sky-800'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-sky-50 text-sky-700 border border-sky-200'
                         }`}>
                           {cnt.type === 'supplier' ? 'Supplier Lapak' : 'Customer Pabrik'}
                         </span>
                       </td>
-                      <td className="py-2 px-3">
-                        <div className="text-slate-200">{cnt.pic}</div>
-                        <div className="font-mono text-slate-400 text-2xs">{cnt.phone}</div>
+                      <td className="py-3 px-4">
+                        <div className="text-slate-800 font-medium">{cnt.pic}</div>
+                        <div className="font-mono text-slate-400 text-3xs">{cnt.phone}</div>
                       </td>
-                      <td className="py-2 px-3 text-slate-300 text-2xs max-w-[200px] truncate" title={cnt.address}>
+                      <td className="py-3 px-4 text-slate-600 text-xs max-w-[220px]" title={cnt.address}>
                         {cnt.address}
                       </td>
-                      <td className="py-2 px-3 text-slate-300 text-2xs max-w-[240px] truncate" title={cnt.specNotes}>
+                      <td className="py-3 px-4 text-slate-500 text-xs max-w-[240px]" title={cnt.specNotes}>
                         {cnt.specNotes}
                       </td>
-                      <td className="py-2 px-3 text-center">
+                      <td className="py-3 px-4 text-center">
                         <div className="flex items-center justify-center space-x-1.5">
                           <button
                             onClick={() => setContactModal({ isOpen: true, item: cnt })}
-                            className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
                             title="Edit Kontak"
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -343,7 +351,7 @@ export default function MasterDataModule({
                               message: `Yakin ingin menghapus kontak ${cnt.name}?`,
                               onConfirm: () => setContacts(prev => prev.filter(x => x.id !== cnt.id))
                             })}
-                            className="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-rose-200"
+                            className="p-1.5 rounded-lg border border-rose-200 text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition"
                             title="Hapus"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -362,64 +370,64 @@ export default function MasterDataModule({
       {/* 4. OPERATIONAL TARIFFS PER KG (LIVE EDITABLE) */}
       {/* ------------------------------------------------------------- */}
       {activeSubTab === 'tariffs' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-6 space-y-5">
           <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
               Tarif Biaya Operasional Pabrik per Kilogram (Live HPP Engine)
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-1">
               Tarif ini menjadi komponen beban operasional yang otomatis mengkalkulasi HPP Cacahan Flakes di Tahap 2 dan HPP Biji Plastik di Tahap 3. Angka ini dapat diubah sewaktu-waktu sesuai tagihan listrik PLN atau upah borongan.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Tariff 1: Pre-Processing */}
-            <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-3">
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-sky-400 uppercase">
+                <span className="text-xs font-bold text-sky-700 uppercase">
                   Tahap 2: Biaya Sortir, Giling & Cuci (Rp / Kg)
                 </span>
-                <span className="text-2xs text-slate-500">Pre-Processing Rate</span>
+                <span className="text-3xs text-slate-400 font-medium">Pre-Processing Rate</span>
               </div>
-              <p className="text-2xs text-slate-400">
+              <p className="text-3xs text-slate-500 leading-relaxed">
                 Mencakup beban daya mesin crusher, motor pencucian drum sentrifugal, sirkulasi air, detergen, dan upah borongan pilah kotoran.
               </p>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-mono text-slate-400">Rp</span>
+              <div className="flex items-center space-x-2 pt-2">
+                <span className="text-xs font-mono font-bold text-slate-400">Rp</span>
                 <input
                   type="number"
                   min="0"
                   step="50"
                   value={costTariffs.preProcessingRatePerKg}
                   onChange={e => handleTariffChange('preProcessingRatePerKg', e.target.value)}
-                  className="w-full bg-slate-900 border border-sky-500 rounded px-3 py-2 text-white font-mono font-bold text-base focus:outline-hidden"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 font-mono font-bold text-lg focus:outline-hidden focus:border-sky-500 shadow-xs transition"
                 />
-                <span className="text-xs font-mono text-slate-400">/ Kg Flakes</span>
+                <span className="text-xs font-mono text-slate-500 font-medium whitespace-nowrap">/ Kg Flakes</span>
               </div>
             </div>
 
             {/* Tariff 2: Extrusion Pelletizing */}
-            <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-3">
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-purple-400 uppercase">
+                <span className="text-xs font-bold text-violet-700 uppercase">
                   Tahap 3: Biaya Ekstrusi & Pelletizing (Rp / Kg)
                 </span>
-                <span className="text-2xs text-slate-500">Extrusion Rate</span>
+                <span className="text-3xs text-slate-400 font-medium">Extrusion Rate</span>
               </div>
-              <p className="text-2xs text-slate-400">
+              <p className="text-3xs text-slate-500 leading-relaxed">
                 Mencakup beban pemanas heater barel ekstruder, dinamo motor screw, penggantian mesh saringan kasa, dan operator mesin pelet.
               </p>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-mono text-slate-400">Rp</span>
+              <div className="flex items-center space-x-2 pt-2">
+                <span className="text-xs font-mono font-bold text-slate-400">Rp</span>
                 <input
                   type="number"
                   min="0"
                   step="50"
                   value={costTariffs.extrusionRatePerKg}
                   onChange={e => handleTariffChange('extrusionRatePerKg', e.target.value)}
-                  className="w-full bg-slate-900 border border-purple-500 rounded px-3 py-2 text-white font-mono font-bold text-base focus:outline-hidden"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 font-mono font-bold text-lg focus:outline-hidden focus:border-violet-500 shadow-xs transition"
                 />
-                <span className="text-xs font-mono text-slate-400">/ Kg Pelet</span>
+                <span className="text-xs font-mono text-slate-500 font-medium whitespace-nowrap">/ Kg Pelet</span>
               </div>
             </div>
           </div>
@@ -476,82 +484,82 @@ function PolymerFormModal({ item, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-xs">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-md w-full overflow-hidden text-xs">
-        <div className="flex justify-between items-center px-4 py-3 border-b border-slate-800 bg-slate-950/40">
-          <h3 className="font-bold text-white text-sm">{item ? 'Edit Master Polimer' : 'Tambah Jenis Polimer'}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden text-xs">
+        <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="font-bold text-slate-800 text-sm">{item ? 'Edit Master Polimer' : 'Tambah Jenis Polimer'}</h3>
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"><X className="w-4 h-4" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 mb-1">Kode Polimer *</label>
+              <label className="block text-slate-600 font-medium mb-1">Kode Polimer *</label>
               <input
                 required
                 type="text"
                 value={formData.code}
                 onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                 placeholder="PP, HDPE, PET"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono uppercase focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono uppercase focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">Kategori Polimer</label>
+              <label className="block text-slate-600 font-medium mb-1">Kategori Polimer</label>
               <input
                 type="text"
                 value={formData.category}
                 onChange={e => setFormData({ ...formData, category: e.target.value })}
                 placeholder="Rigid, Film, Blow"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
           </div>
           <div>
-            <label className="block text-slate-400 mb-1">Nama Lengkap Polimer *</label>
+            <label className="block text-slate-600 font-medium mb-1">Nama Lengkap Polimer *</label>
             <input
               required
               type="text"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               placeholder="Polypropylene (PP)"
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 mb-1">Melt Flow Index (MFI)</label>
+              <label className="block text-slate-600 font-medium mb-1">Melt Flow Index (MFI)</label>
               <input
                 type="text"
                 value={formData.meltFlowIndex}
                 onChange={e => setFormData({ ...formData, meltFlowIndex: e.target.value })}
                 placeholder="12 - 25"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">Wujud Bawaan</label>
+              <label className="block text-slate-600 font-medium mb-1">Wujud Bawaan</label>
               <input
                 type="text"
                 value={formData.defaultForm}
                 onChange={e => setFormData({ ...formData, defaultForm: e.target.value })}
                 placeholder="Afalan / Karungan"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
           </div>
           <div>
-            <label className="block text-slate-400 mb-1">Deskripsi & Ciri Fisik</label>
+            <label className="block text-slate-600 font-medium mb-1">Deskripsi & Ciri Fisik</label>
             <textarea
               rows={2}
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
               placeholder="Kegunaan produk akhir, karakteristik lelehan..."
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
             />
           </div>
-          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">Batal</button>
-            <button type="submit" className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Simpan Polimer</button>
+          <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition">Batal</button>
+            <button type="submit" className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-xs shadow-violet-200 transition">Simpan Polimer</button>
           </div>
         </form>
       </div>
@@ -578,27 +586,27 @@ function AdditiveFormModal({ item, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-xs">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-md w-full overflow-hidden text-xs">
-        <div className="flex justify-between items-center px-4 py-3 border-b border-slate-800 bg-slate-950/40">
-          <h3 className="font-bold text-white text-sm">{item ? 'Edit Master Aditif' : 'Tambah Bahan Tambahan / Aditif'}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden text-xs">
+        <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="font-bold text-slate-800 text-sm">{item ? 'Edit Master Aditif' : 'Tambah Bahan Tambahan / Aditif'}</h3>
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"><X className="w-4 h-4" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 mb-1">Kode Aditif *</label>
+              <label className="block text-slate-600 font-medium mb-1">Kode Aditif *</label>
               <input
                 required
                 type="text"
                 value={formData.code}
                 onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                 placeholder="MB-BLK, FLR-CA"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono uppercase focus:outline-hidden focus:border-purple-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono uppercase focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">Harga Beli / Kg (Rp) *</label>
+              <label className="block text-slate-600 font-medium mb-1">Harga Beli / Kg (Rp) *</label>
               <input
                 required
                 type="number"
@@ -606,44 +614,44 @@ function AdditiveFormModal({ item, onSave, onClose }) {
                 step="500"
                 value={formData.unitPrice}
                 onChange={e => setFormData({ ...formData, unitPrice: Number(e.target.value) })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-right focus:outline-hidden focus:border-purple-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono text-right focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
           </div>
           <div>
-            <label className="block text-slate-400 mb-1">Nama Lengkap Aditif *</label>
+            <label className="block text-slate-600 font-medium mb-1">Nama Lengkap Aditif *</label>
             <input
               required
               type="text"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               placeholder="Masterbatch Hitam Carbon 40%"
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-purple-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
             />
           </div>
           <div>
-            <label className="block text-slate-400 mb-1">Fungsi / Peran Formulasi</label>
+            <label className="block text-slate-600 font-medium mb-1">Fungsi / Peran Formulasi</label>
             <input
               type="text"
               value={formData.function}
               onChange={e => setFormData({ ...formData, function: e.target.value })}
               placeholder="Pewarna, Pengisi CaCO3, Pencerah OB-1"
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-purple-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
             />
           </div>
           <div>
-            <label className="block text-slate-400 mb-1">Keterangan Teknis</label>
+            <label className="block text-slate-600 font-medium mb-1">Keterangan Teknis</label>
             <textarea
               rows={2}
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
               placeholder="Kadar karbon, dosis anjuran % pemakaian..."
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-purple-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
             />
           </div>
-          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">Batal</button>
-            <button type="submit" className="px-3 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold">Simpan Aditif</button>
+          <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition">Batal</button>
+            <button type="submit" className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-xs shadow-violet-200 transition">Simpan Aditif</button>
           </div>
         </form>
       </div>
@@ -672,82 +680,82 @@ function ContactFormModal({ item, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-xs">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden text-xs">
-        <div className="flex justify-between items-center px-4 py-3 border-b border-slate-800 bg-slate-950/40">
-          <h3 className="font-bold text-white text-sm">{item ? `Edit Kontak: ${item.name}` : 'Tambah Kontak Baru'}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden text-xs">
+        <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="font-bold text-slate-800 text-sm">{item ? `Edit Kontak: ${item.name}` : 'Tambah Kontak Baru'}</h3>
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"><X className="w-4 h-4" /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-slate-400 mb-1">Tipe Kontak *</label>
+              <label className="block text-slate-600 font-medium mb-1">Tipe Kontak *</label>
               <select
                 value={formData.type}
                 onChange={e => setFormData({ ...formData, type: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               >
                 <option value="supplier">Supplier / Pengepul</option>
                 <option value="customer">Customer / Pabrik</option>
               </select>
             </div>
             <div className="col-span-2">
-              <label className="block text-slate-400 mb-1">Nama Perusahaan / Lapak *</label>
+              <label className="block text-slate-600 font-medium mb-1">Nama Perusahaan / Lapak *</label>
               <input
                 required
                 type="text"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                 placeholder="UD Sumber Rejeki / PT Injeksi"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 mb-1">PIC (Penanggung Jawab)</label>
+              <label className="block text-slate-600 font-medium mb-1">PIC (Penanggung Jawab)</label>
               <input
                 type="text"
                 value={formData.pic}
                 onChange={e => setFormData({ ...formData, pic: e.target.value })}
                 placeholder="Bpk. Handoko"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">No. WhatsApp / Telepon</label>
+              <label className="block text-slate-600 font-medium mb-1">No. WhatsApp / Telepon</label>
               <input
                 type="text"
                 value={formData.phone}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="0812-xxxx-xxxx"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-mono focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
               />
             </div>
           </div>
           <div>
-            <label className="block text-slate-400 mb-1">Alamat Gudang / Pabrik</label>
+            <label className="block text-slate-600 font-medium mb-1">Alamat Gudang / Pabrik</label>
             <input
               type="text"
               value={formData.address}
               onChange={e => setFormData({ ...formData, address: e.target.value })}
               placeholder="Alamat penjemputan atau pengiriman barang"
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
             />
           </div>
           <div>
-            <label className="block text-slate-400 mb-1">Catatan Spesifikasi (MFI / Warna Permintaan)</label>
+            <label className="block text-slate-600 font-medium mb-1">Catatan Spesifikasi (MFI / Warna Permintaan)</label>
             <textarea
               rows={2}
               value={formData.specNotes}
               onChange={e => setFormData({ ...formData, specNotes: e.target.value })}
               placeholder="Kebutuhan part injeksi, MFI 12-16, warna hitam solid, dsb."
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-hidden focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-hidden focus:border-violet-500 focus:bg-white transition"
             />
           </div>
-          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">Batal</button>
-            <button type="submit" className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Simpan Kontak</button>
+          <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition">Batal</button>
+            <button type="submit" className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-xs shadow-violet-200 transition">Simpan Kontak</button>
           </div>
         </form>
       </div>

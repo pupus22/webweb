@@ -51,19 +51,26 @@ export function getStatusBadge(status) {
     case 'Selesai':
     case 'Lunas':
     case 'Lulus QC':
-      return 'bg-emerald-950/90 text-emerald-400 border border-emerald-800';
+    case 'Siap Kirim':
+      return 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold';
     case 'Sedang Cuci/Giling':
     case 'Dalam Proses Ekstrusi':
     case 'Dalam Proses':
     case 'DP':
+    case 'Flakes Menipis':
+    case 'Stok Kritis':
+      return 'bg-violet-50 text-violet-700 border border-violet-200 font-semibold';
     case 'Hold':
-      return 'bg-amber-950/90 text-amber-300 border border-amber-800';
+    case 'Karantina':
+      return 'bg-amber-50 text-amber-700 border border-amber-200 font-semibold';
     case 'Belum Sortir':
     case 'Belum Bayar':
     case 'Belum Lunas':
     case 'Reject QC':
-      return 'bg-rose-950/90 text-rose-300 border border-rose-800';
+    case 'Habis Terolah':
+    case 'Habis Terjual':
+      return 'bg-rose-50 text-rose-700 border border-rose-200 font-semibold';
     default:
-      return 'bg-slate-800 text-slate-300 border border-slate-700';
+      return 'bg-slate-100 text-slate-700 border border-slate-200 font-semibold';
   }
 }

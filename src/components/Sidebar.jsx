@@ -7,19 +7,15 @@ import {
   Boxes,
   TrendingUp,
   Database,
-  ChevronLeft,
-  ChevronRight,
   X,
   Sparkles,
   Layers,
-  Scale
+  ChevronRight
 } from 'lucide-react';
 
 export default function Sidebar({
   activeTab,
   setActiveTab,
-  isCollapsed,
-  setIsCollapsed,
   mobileOpen,
   setMobileOpen,
   counts = {}
@@ -30,8 +26,6 @@ export default function Sidebar({
       label: 'Dashboard & Alur',
       shortLabel: 'Dashboard',
       icon: LayoutDashboard,
-      badge: 'Flow',
-      badgeColor: 'bg-indigo-900/60 text-indigo-300 border border-indigo-500/30',
       description: 'Pipeline 5 Tahap & KPI Susut'
     },
     {
@@ -39,9 +33,6 @@ export default function Sidebar({
       label: 'Tahap 1: Limbah Reject',
       shortLabel: 'T1: Reject',
       icon: Truck,
-      step: '1',
-      badge: counts.rawPurchases ? `${counts.rawPurchases}` : '0',
-      badgeColor: 'bg-emerald-950 text-emerald-400 border border-emerald-500/30',
       description: 'Inbound Pembelian Bahan Kotor'
     },
     {
@@ -49,9 +40,6 @@ export default function Sidebar({
       label: 'Tahap 2: Sortir, Giling & Cuci',
       shortLabel: 'T2: Flakes',
       icon: Waves,
-      step: '2',
-      badge: counts.preProcessings ? `${counts.preProcessings}` : '0',
-      badgeColor: 'bg-blue-950 text-blue-400 border border-blue-500/30',
       description: 'Pre-Processing Cacahan Kering'
     },
     {
@@ -59,9 +47,6 @@ export default function Sidebar({
       label: 'Tahap 3: Blending & Ekstrusi',
       shortLabel: 'T3: Ekstrusi',
       icon: Flame,
-      step: '3',
-      badge: counts.productionSPKs ? `${counts.productionSPKs}` : '0',
-      badgeColor: 'bg-purple-950 text-purple-400 border border-purple-500/30',
       description: 'SPK Formulasi Resep & Pelet'
     },
     {
@@ -69,9 +54,6 @@ export default function Sidebar({
       label: 'Tahap 4: Gudang Biji Plastik',
       shortLabel: 'T4: Gudang',
       icon: Boxes,
-      step: '4',
-      badge: counts.finishedGoods ? `${counts.finishedGoods}` : '0',
-      badgeColor: 'bg-amber-950 text-amber-400 border border-amber-500/30',
       description: 'QC, Pelet Sak @ 25Kg & Flakes'
     },
     {
@@ -79,18 +61,13 @@ export default function Sidebar({
       label: 'Tahap 5: Penjualan & DO',
       shortLabel: 'T5: Penjualan',
       icon: TrendingUp,
-      step: '5',
-      badge: counts.salesOrders ? `${counts.salesOrders}` : '0',
-      badgeColor: 'bg-emerald-950 text-emerald-400 border border-emerald-500/30',
-      description: 'Surat Jalan, DO & Analisis Margin'
+      description: 'Surat Jalan, DO & Margin'
     },
     {
       id: 'master',
       label: 'Master Data & Tarif Biaya',
       shortLabel: 'Master Data',
       icon: Database,
-      badge: 'Setting',
-      badgeColor: 'bg-slate-800 text-slate-300 border border-slate-700',
       description: 'Polimer, Aditif, Kontak & Tarif'
     }
   ];
@@ -100,138 +77,140 @@ export default function Sidebar({
     if (mobileOpen) setMobileOpen(false);
   };
 
-  const navContent = (
-    <div className="flex flex-col h-full">
-      {/* Brand Header */}
-      <div className={`p-3.5 border-b border-slate-800 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-        {!isCollapsed && (
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-emerald-500 flex items-center justify-center shadow-md">
-              <Boxes className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <div className="font-black text-sm text-white tracking-tight flex items-center space-x-1.5">
-                <span>PolyComp</span>
-                <span className="text-2xs font-mono font-normal text-purple-400 bg-purple-950/80 px-1 py-0.2 rounded border border-purple-500/30">
-                  ERP v2
-                </span>
-              </div>
-              <div className="text-2xs text-slate-400 leading-tight">
-                Plastics Recycling & Compounding
-              </div>
-            </div>
-          </div>
-        )}
-
-        {isCollapsed && (
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-emerald-500 flex items-center justify-center shadow-md">
-            <Boxes className="w-4 h-4 text-white" />
-          </div>
-        )}
-
-        {/* Mobile close button */}
-        <button
-          onClick={() => setMobileOpen(false)}
-          className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-slate-800"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Alur Pipeline Workflow Indicator */}
-      {!isCollapsed && (
-        <div className="px-3.5 pt-3 pb-1">
-          <div className="text-2xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center justify-between">
-            <span>Alur Pabrik Nyata</span>
-            <span className="text-2xs text-emerald-400 font-mono">100% Editable</span>
-          </div>
-        </div>
-      )}
-
-      {/* Navigation Links */}
-      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleSelectTab(item.id)}
-              className={`w-full flex items-center rounded-lg transition text-left group min-h-[44px] ${
-                isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2 space-x-3'
-              } ${
-                isActive
-                  ? 'bg-purple-600/90 text-white shadow-md shadow-purple-900/30 border border-purple-400/40 font-semibold'
-                  : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-              }`}
-              title={isCollapsed ? item.label : undefined}
-            >
-              <div className="relative shrink-0">
-                <Icon className={`w-4 h-4 transition ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-purple-400'}`} />
-                {item.step && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-slate-900 text-purple-300 text-3xs font-mono font-bold flex items-center justify-center border border-slate-700">
-                    {item.step}
-                  </span>
-                )}
-              </div>
-
-              {!isCollapsed && (
-                <div className="flex-1 min-w-0 flex items-center justify-between">
-                  <div className="flex-1 min-w-0 pr-1">
-                    <div className="text-xs font-semibold leading-snug">{item.label}</div>
-                    <div className="text-3xs text-slate-400 leading-tight mt-0.5 group-hover:text-slate-300">
-                      {item.description}
-                    </div>
-                  </div>
-                  {item.badge && (
-                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-3xs font-mono font-bold shrink-0 ${item.badgeColor}`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Desktop Collapse Toggle */}
-      <div className="hidden lg:flex p-2 border-t border-slate-800 justify-end">
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1.5 rounded-lg bg-slate-950 text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700 transition"
-          title={isCollapsed ? 'Buka Sidebar' : 'Kecilkan Sidebar'}
-        >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <>
-      {/* Desktop Persistent Sidebar (lg:) */}
-      <aside
-        className={`hidden lg:flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-200 shrink-0 select-none ${
-          isCollapsed ? 'w-16' : 'w-72'
-        }`}
-      >
-        {navContent}
+      {/* ----------------------------------------------------------- */}
+      {/* DESKTOP & TABLET: QARGO SLIM ICON RAIL (w-20) */}
+      {/* ----------------------------------------------------------- */}
+      <aside className="hidden lg:flex w-20 bg-white border-r border-slate-100 flex-col items-center py-5 shrink-0 z-30 justify-between select-none">
+        {/* Top: Violet Brand Logo */}
+        <div className="flex flex-col items-center space-y-4">
+          <button
+            onClick={() => handleSelectTab('dashboard')}
+            className="w-11 h-11 rounded-2xl bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center font-black text-lg shadow-md shadow-violet-200 transition group relative"
+            title="PolyComp ERP"
+          >
+            <span>P</span>
+            {/* Tooltip */}
+            <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-3xs font-semibold rounded-md shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap z-50">
+              PolyComp ERP
+            </div>
+          </button>
+        </div>
+
+        {/* Center: Clean Icon Rail with Generous Spacing (No number badges stacked on icons) */}
+        <nav className="flex flex-col items-center space-y-3.5 my-auto">
+          {menuItems.map((item) => {
+            const IconComponent = item.icon;
+            const isActive = activeTab === item.id;
+
+            return (
+              <div key={item.id} className="relative group flex items-center justify-center">
+                <button
+                  onClick={() => handleSelectTab(item.id)}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                    isActive
+                      ? 'bg-violet-50 text-violet-600 shadow-xs ring-1 ring-violet-200/60'
+                      : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+                  aria-label={item.label}
+                >
+                  <IconComponent className="w-5 h-5 stroke-[1.8]" />
+                </button>
+
+                {/* Floating Tooltip to the Right */}
+                <div className="absolute left-full ml-3.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 whitespace-nowrap z-50 flex flex-col min-w-[140px]">
+                  <span className="text-xs font-bold">{item.label}</span>
+                  <span className="text-3xs text-slate-400">{item.description}</span>
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Bottom: Settings / Master Data Shortcut */}
+        <div className="relative group flex items-center justify-center">
+          <button
+            onClick={() => handleSelectTab('master')}
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition ${
+              activeTab === 'master'
+                ? 'bg-violet-50 text-violet-600'
+                : 'text-slate-300 hover:text-slate-600 hover:bg-slate-50'
+            }`}
+            title="Pengaturan Master Data"
+          >
+            <Database className="w-4 h-4" />
+          </button>
+          <div className="absolute left-full ml-3.5 px-2.5 py-1 bg-slate-900 text-white text-3xs font-semibold rounded-md shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap z-50">
+            Master Data & Tarif
+          </div>
+        </div>
       </aside>
 
-      {/* Tablet & Mobile Slide-Over Drawer (< lg) */}
+      {/* ----------------------------------------------------------- */}
+      {/* MOBILE DRAWER: Full Slide-in on Smartphone / Small Screens */}
+      {/* ----------------------------------------------------------- */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
+        <div className="lg:hidden fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileOpen(false)}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
           />
 
-          {/* Drawer content */}
-          <div className="relative w-72 max-w-[85vw] bg-slate-900 border-r border-slate-800 h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
-            {navContent}
+          {/* Drawer Panel */}
+          <div className="relative w-72 max-w-full bg-white h-full shadow-2xl flex flex-col justify-between p-4 z-10 border-r border-slate-100">
+            <div>
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center font-black text-base shadow-sm shadow-violet-200">
+                    P
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-800 leading-tight">PolyComp ERP</h2>
+                    <p className="text-3xs text-slate-400">Recycled Plastics Compounding</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Menu List */}
+              <nav className="mt-4 space-y-1.5">
+                {menuItems.map((item) => {
+                  const IconComponent = item.icon;
+                  const isActive = activeTab === item.id;
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelectTab(item.id)}
+                      className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
+                        isActive
+                          ? 'bg-violet-50 text-violet-700 font-bold'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                    >
+                      <IconComponent className={`w-4 h-4 ${isActive ? 'text-violet-600' : 'text-slate-400'}`} />
+                      <div className="text-left flex-1 min-w-0">
+                        <div className="truncate">{item.label}</div>
+                      </div>
+                      {isActive && <ChevronRight className="w-4 h-4 text-violet-600 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="pt-3 border-t border-slate-100 text-3xs text-slate-400 text-center">
+              PolyComp ERP v2.0 • Clean Light SaaS
+            </div>
           </div>
         </div>
       )}

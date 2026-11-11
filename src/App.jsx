@@ -31,9 +31,9 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Theme state: dark (default) | light
+  // Theme state: light (default) | dark
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('polycomp_theme') || 'dark';
+    return localStorage.getItem('polycomp_theme') || 'light';
   });
 
   const toggleTheme = () => {
@@ -317,13 +317,13 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className={`min-h-screen flex flex-col font-sans overflow-x-hidden selection:bg-purple-600 selection:text-white ${
-        theme === 'light' ? 'bg-slate-100 text-slate-900' : 'bg-slate-950 text-slate-100'
+      <div className={`min-h-screen flex flex-col font-sans overflow-x-hidden selection:bg-violet-600 selection:text-white ${
+        theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-[#F4F6F9] text-slate-800'
       }`}>
         {/* Toast Notification */}
         {toast && (
           <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="bg-emerald-600 text-white font-medium px-4 py-2 rounded-lg shadow-xl text-xs flex items-center space-x-2 border border-emerald-400/40">
+            <div className="bg-emerald-600 text-white font-medium px-4 py-2 rounded-xl shadow-xl text-xs flex items-center space-x-2 border border-emerald-400/40">
               <span>✓</span>
               <span>{toast.message}</span>
             </div>
@@ -333,6 +333,7 @@ export default function App() {
         {/* Global Navbar */}
         <Navbar
           activeTab={activeTab}
+          setActiveTab={setActiveTab}
           onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           onOpenSearch={() => setSearchModalOpen(true)}
           theme={theme}
@@ -341,6 +342,7 @@ export default function App() {
           onResetDemo={handleResetDemo}
           onExportJSON={handleExportBackup}
           onImportJSON={handleImportBackup}
+          onQuickAction={(tab) => setActiveTab(tab)}
         />
 
         {/* Main Layout Container (Sidebar + Content Area) */}
@@ -456,23 +458,23 @@ export default function App() {
         </div>
 
         {/* High-Density Footer Status Bar */}
-        <footer className="no-print bg-slate-900 border-t border-slate-800 text-slate-500 text-2xs py-2 px-4 shrink-0">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1">
+        <footer className="no-print bg-white border-t border-slate-100 text-slate-400 text-2xs py-2.5 px-6 shrink-0">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1 font-sans">
             <div className="flex items-center space-x-2">
-              <span className="font-semibold text-slate-400">PolyComp ERP v2.0</span>
-              <span>•</span>
-              <span>Plastics Recycling, Washing, Compounding & Pellets Manufacturing</span>
+              <span className="font-bold text-slate-700">PolyComp ERP</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-500">Recycled Plastics Washing & Compounding</span>
             </div>
-            <div className="flex items-center space-x-2.5 font-mono">
-              <span>Reject: {recalibratedRawPurchases.length}</span>
-              <span>•</span>
-              <span>Flakes: {recalibratedPreProcessings.length}</span>
-              <span>•</span>
-              <span>SPK Pelet: {recalibratedProductionSPKs.length}</span>
-              <span>•</span>
-              <span>Gudang Sak: {finishedGoodsPelletInventory.reduce((a, b) => a + (b.availableBags || 0), 0)} Sak</span>
-              <span>•</span>
-              <span>Surat Jalan: {recalibratedSalesOrders.length}</span>
+            <div className="flex items-center space-x-2.5 font-mono text-slate-500">
+              <span>Reject: <strong className="text-slate-800">{recalibratedRawPurchases.length}</strong></span>
+              <span className="text-slate-300">•</span>
+              <span>Flakes: <strong className="text-slate-800">{recalibratedPreProcessings.length}</strong></span>
+              <span className="text-slate-300">•</span>
+              <span>SPK: <strong className="text-slate-800">{recalibratedProductionSPKs.length}</strong></span>
+              <span className="text-slate-300">•</span>
+              <span>Gudang: <strong className="text-slate-800">{finishedGoodsPelletInventory.reduce((a, b) => a + (b.availableBags || 0), 0)} Sak</strong></span>
+              <span className="text-slate-300">•</span>
+              <span>DO: <strong className="text-slate-800">{recalibratedSalesOrders.length}</strong></span>
             </div>
           </div>
         </footer>

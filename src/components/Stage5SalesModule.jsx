@@ -113,24 +113,77 @@ export default function Stage5SalesModule({
 
   return (
     <div className="space-y-4">
-      {/* Top Filter & Action Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
-        <div className="flex items-center space-x-2 w-full md:w-auto">
+      {/* Top Metric Cards: Revenue & Margin Analytics + AR Piutang */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 flex items-center justify-between">
+          <div>
+            <span className="text-3xs text-slate-400 block uppercase font-semibold">Total Omset Penjualan</span>
+            <span className="text-xl font-bold text-slate-800 font-mono">{formatRupiah(totalRevenue)}</span>
+            <span className="text-3xs text-slate-400 block mt-0.5 font-mono">
+              Volume: {formatWeight(totalKgSold)} Pelet
+            </span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+            <DollarSign className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 flex items-center justify-between">
+          <div>
+            <span className="text-3xs text-slate-400 block uppercase font-semibold">Total Beban Pokok (HPP)</span>
+            <span className="text-xl font-bold text-slate-800 font-mono">{formatRupiah(totalCogs)}</span>
+            <span className="text-3xs text-slate-400 block mt-0.5">Bahan Flakes + Olah Ekstrusi</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
+            <ShoppingCart className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 flex items-center justify-between">
+          <div>
+            <span className="text-3xs text-slate-400 block uppercase font-semibold">Laba Kotor & Margin</span>
+            <span className="text-xl font-bold text-violet-600 font-mono">{formatRupiah(totalGrossProfit)}</span>
+            <span className="text-3xs text-violet-600 font-bold block mt-0.5 font-mono">
+              Margin Rata-rata: {formatPercent(avgMargin)}
+            </span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 flex items-center justify-between">
+          <div>
+            <span className="text-3xs text-slate-400 block uppercase font-semibold">Sisa Piutang (AR)</span>
+            <span className="text-xl font-bold text-rose-600 font-mono">{formatRupiah(totalReceivable)}</span>
+            <span className="text-3xs text-slate-400 block mt-0.5 font-mono">
+              Terbayar: {formatRupiah(totalPaidRevenue)}
+            </span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-100">
+            <CreditCard className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Action and Filter Bar */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3.5 flex flex-col md:flex-row items-center justify-between gap-2.5 text-xs">
+        <div className="flex items-center space-x-2 w-full md:w-auto flex-wrap gap-y-2">
           <div className="relative flex-1 md:w-64">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Cari DO, Invoice, Customer, Lot..."
-              className="w-full bg-slate-950 border border-slate-700 rounded-md pl-8 pr-2.5 py-1.5 text-white placeholder-slate-500 focus:outline-hidden focus:border-purple-500 text-xs"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-2.5 py-1.5 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-violet-500 focus:bg-white text-xs"
             />
           </div>
 
           <select
             value={paymentFilter}
             onChange={e => setPaymentFilter(e.target.value)}
-            className="bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-white focus:outline-hidden focus:border-purple-500 text-xs"
+            className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-violet-500 text-xs"
           >
             <option value="ALL">Semua Pembayaran</option>
             <option value="Lunas">Lunas</option>
@@ -141,72 +194,19 @@ export default function Stage5SalesModule({
 
         <button
           onClick={() => setModalState({ isOpen: true, item: null, preselectedLotNo: null })}
-          className="flex items-center space-x-1.5 px-3 py-2 md:py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-semibold transition min-h-[40px] md:min-h-0 text-xs w-full md:w-auto justify-center shadow-xs"
+          className="flex items-center space-x-1.5 px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold transition shadow-xs text-xs w-full md:w-auto justify-center"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>+ Buat Surat Jalan & Penjualan Baru</span>
         </button>
       </div>
 
-      {/* KPI Cards: Revenue & Margin Analytics + AR Piutang */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <span className="text-2xs text-slate-400 block uppercase font-medium">Total Omset Penjualan</span>
-            <span className="text-lg font-bold text-white font-mono">{formatRupiah(totalRevenue)}</span>
-            <span className="text-2xs text-slate-400 block mt-0.5 font-mono">
-              Volume: {formatWeight(totalKgSold)} Pelet
-            </span>
-          </div>
-          <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <DollarSign className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <span className="text-2xs text-slate-400 block uppercase font-medium">Total Beban Pokok (HPP)</span>
-            <span className="text-lg font-bold text-amber-400 font-mono">{formatRupiah(totalCogs)}</span>
-            <span className="text-2xs text-slate-500 block mt-0.5">Bahan Flakes + Olah Ekstrusi</span>
-          </div>
-          <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <ShoppingCart className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <span className="text-2xs text-slate-400 block uppercase font-medium">Laba Kotor & Margin</span>
-            <span className="text-lg font-bold text-emerald-400 font-mono">{formatRupiah(totalGrossProfit)}</span>
-            <span className="text-2xs text-purple-400 font-bold block mt-0.5 font-mono">
-              Margin Rata-rata: {formatPercent(avgMargin)}
-            </span>
-          </div>
-          <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <span className="text-2xs text-slate-400 block uppercase font-medium">Sisa Piutang Customer (AR)</span>
-            <span className="text-lg font-bold text-rose-400 font-mono">{formatRupiah(totalReceivable)}</span>
-            <span className="text-2xs text-slate-400 block mt-0.5 font-mono">
-              Terbayar: {formatRupiah(totalPaidRevenue)}
-            </span>
-          </div>
-          <div className="p-2.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <CreditCard className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
-
       {/* Main High-density Data Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden text-xs">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden text-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1100px]">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/70 text-2xs uppercase text-slate-400 font-semibold tracking-wider">
+              <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-400 text-3xs uppercase tracking-wider font-semibold">
                 <th className="py-2.5 px-3">No. DO & No. Invoice</th>
                 <th className="py-2.5 px-3">Tanggal</th>
                 <th className="py-2.5 px-3">Customer & Alamat</th>
@@ -216,10 +216,10 @@ export default function Stage5SalesModule({
                 <th className="py-2.5 px-3 text-right">Total Omset</th>
                 <th className="py-2.5 px-3 text-right">Laba Kotor & Margin</th>
                 <th className="py-2.5 px-3 text-center">Status Bayar & Piutang</th>
-                <th className="py-2.5 px-3 text-center sticky right-0 bg-slate-950/90 min-w-[150px]">Aksi</th>
+                <th className="py-2.5 px-3 text-center sticky right-0 bg-white/95 min-w-[150px]">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-mono">
+            <tbody className="divide-y divide-slate-100 font-mono text-slate-700">
               {filteredOrders.map(so => {
                 const orderNo = so.orderNo || so.doNo || 'DO-PENDING';
                 const invoiceNo = so.invoiceNo || `INV-${orderNo.replace('DO-', '')}`;
@@ -228,34 +228,34 @@ export default function Stage5SalesModule({
                   : (so.paymentStatus === 'Lunas' ? 0 : Math.max(0, (so.netRevenue || 0) - (so.paidAmount || 0)));
 
                 return (
-                  <tr key={so.id} className="hover:bg-slate-800/40 transition">
+                  <tr key={so.id} className="hover:bg-slate-50/70 transition">
                     {/* Fixed Column 1: DO & Invoice prominently displayed */}
                     <td className="py-2 px-3">
                       <button
                         type="button"
                         onClick={() => onOpenTraceability && onOpenTraceability(orderNo)}
-                        className="font-bold text-purple-400 hover:text-purple-300 hover:underline flex items-center space-x-1 text-left"
+                        className="font-bold text-violet-600 hover:text-violet-700 hover:underline flex items-center space-x-1 text-left"
                         title="Klik untuk melihat silsilah batch pelet yang dikirim"
                       >
-                        <GitBranch className="w-3 h-3 text-purple-400 shrink-0" />
+                        <GitBranch className="w-3 h-3 text-violet-400 shrink-0" />
                         <span>{orderNo}</span>
                       </button>
-                      <div className="text-2xs text-emerald-400 font-mono font-semibold">
+                      <div className="text-3xs text-emerald-600 font-mono font-bold">
                         {invoiceNo}
                       </div>
-                      <div className="text-2xs text-slate-400 flex items-center space-x-1 font-sans mt-0.5">
-                        <Truck className="w-3 h-3 text-slate-500 shrink-0" />
+                      <div className="text-3xs text-slate-400 flex items-center space-x-1 font-sans mt-0.5">
+                        <Truck className="w-3 h-3 text-slate-400 shrink-0" />
                         <span>{so.truckPlate || 'Armada Pabrik'} {so.driverName ? `(${so.driverName})` : ''}</span>
                       </div>
                     </td>
 
-                    <td className="py-2 px-3 text-slate-300 font-sans">
+                    <td className="py-2 px-3 text-slate-600 font-sans">
                       {formatDate(so.date)}
                     </td>
 
                     <td className="py-2 px-3 font-sans">
-                      <div className="font-semibold text-emerald-400 leading-snug">{so.customerName}</div>
-                      <div className="text-2xs text-slate-400 leading-tight">
+                      <div className="font-semibold text-slate-800 leading-snug">{so.customerName}</div>
+                      <div className="text-3xs text-slate-400 leading-tight">
                         {so.customerAddress || '-'}
                       </div>
                     </td>
@@ -264,62 +264,62 @@ export default function Stage5SalesModule({
                       <button
                         type="button"
                         onClick={() => onOpenTraceability && onOpenTraceability(so.targetLotNo)}
-                        className="font-bold text-purple-400 hover:text-purple-300 hover:underline flex items-center space-x-1 text-left"
+                        className="font-bold text-violet-600 hover:text-violet-700 hover:underline flex items-center space-x-1 text-left"
                         title="Lacak lot pelet ini"
                       >
-                        <GitBranch className="w-3 h-3 text-purple-400 shrink-0" />
+                        <GitBranch className="w-3 h-3 text-violet-400 shrink-0" />
                         <span>{so.targetLotNo}</span>
                       </button>
-                      <div className="text-2xs text-slate-400 font-sans">HPP: {formatRupiah(so.cogsPerKg)}/Kg</div>
+                      <div className="text-3xs text-slate-400 font-sans">HPP: {formatRupiah(so.cogsPerKg)}/Kg</div>
                     </td>
 
                     <td className="py-2 px-3 text-right">
-                      <div className="font-bold text-white text-sm">{formatWeight(so.qtyKg)}</div>
-                      <div className="text-2xs text-amber-300 font-sans font-semibold">
+                      <div className="font-bold text-slate-800 text-sm">{formatWeight(so.qtyKg)}</div>
+                      <div className="text-3xs text-slate-500 font-sans font-medium">
                         {so.bagCount} Sak (@ 25 Kg)
                       </div>
                     </td>
 
-                    <td className="py-2 px-3 text-right font-bold text-white">
+                    <td className="py-2 px-3 text-right font-bold text-slate-800">
                       {formatRupiah(so.pricePerKg)}
                     </td>
 
                     <td className="py-2 px-3 text-right">
-                      <div className="font-bold text-emerald-400 text-sm">{formatRupiah(so.netRevenue)}</div>
+                      <div className="font-bold text-slate-800 text-sm">{formatRupiah(so.netRevenue)}</div>
                       {so.shippingCost > 0 && (
-                        <div className="text-2xs text-slate-500 font-sans">+ Ongkir: {formatRupiah(so.shippingCost)}</div>
+                        <div className="text-3xs text-slate-400 font-sans">+ Ongkir: {formatRupiah(so.shippingCost)}</div>
                       )}
                     </td>
 
                     <td className="py-2 px-3 text-right">
-                      <div className="font-bold text-emerald-400">{formatRupiah(so.grossProfit)}</div>
-                      <div className="text-2xs text-purple-400 font-bold font-sans">
+                      <div className="font-bold text-violet-600">{formatRupiah(so.grossProfit)}</div>
+                      <div className="text-3xs text-violet-600 font-bold font-sans">
                         Margin: {formatPercent(so.marginPercent)}
                       </div>
                     </td>
 
                     <td className="py-2 px-3 text-center font-sans">
-                      <span className={`px-2 py-0.5 rounded-full text-2xs font-semibold ${getStatusBadge(so.paymentStatus)}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-3xs font-semibold ${getStatusBadge(so.paymentStatus)}`}>
                         {so.paymentStatus}
                       </span>
                       {remaining > 0 ? (
-                        <div className="text-2xs text-rose-400 font-mono mt-0.5 font-semibold">
+                        <div className="text-3xs text-rose-500 font-mono mt-0.5 font-bold">
                           Sisa: {formatRupiah(remaining)}
                         </div>
                       ) : (
-                        <div className="text-2xs text-emerald-400 font-mono mt-0.5">
+                        <div className="text-3xs text-emerald-600 font-mono mt-0.5 font-medium">
                           Lunas 100%
                         </div>
                       )}
                     </td>
 
-                    <td className="py-2 px-3 text-center sticky right-0 bg-slate-950/95 font-sans">
+                    <td className="py-2 px-3 text-center sticky right-0 bg-white/95 font-sans">
                       <div className="flex items-center justify-center space-x-1">
                         {/* Pelunasan Piutang */}
                         {so.paymentStatus !== 'Lunas' && (
                           <button
                             onClick={() => setPaymentModalState({ isOpen: true, item: so })}
-                            className="px-2 py-1 rounded bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-500/30 text-2xs flex items-center space-x-0.5"
+                            className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-3xs flex items-center space-x-0.5 transition"
                             title="Catat Pembayaran Customer / Pelunasan Piutang"
                           >
                             <CreditCard className="w-3 h-3" />
@@ -330,7 +330,7 @@ export default function Stage5SalesModule({
                         {/* Cetak DO & Invoice */}
                         <button
                           onClick={() => onPrintOrder && onPrintOrder(so)}
-                          className="p-1 rounded bg-sky-950/80 hover:bg-sky-900 text-sky-300 hover:text-white border border-sky-500/30"
+                          className="p-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 transition"
                           title="Cetak Surat Jalan & Faktur"
                         >
                           <Printer className="w-3.5 h-3.5" />
@@ -339,7 +339,7 @@ export default function Stage5SalesModule({
                         {/* Edit Transaksi */}
                         <button
                           onClick={() => setModalState({ isOpen: true, item: so, preselectedLotNo: null })}
-                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+                          className="p-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 transition"
                           title="Edit Transaksi Penjualan"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -352,7 +352,7 @@ export default function Stage5SalesModule({
                             message: `Yakin ingin menghapus penjualan ke ${so.customerName}? Stok pelet lot ${so.targetLotNo} sebanyak ${formatWeight(so.qtyKg)} akan dikembalikan ke gudang pelet.`,
                             onConfirm: () => setSalesOrders(prev => prev.filter(x => x.id !== so.id))
                           })}
-                          className="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-400 hover:text-rose-200"
+                          className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 transition"
                           title="Hapus"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -364,7 +364,7 @@ export default function Stage5SalesModule({
               })}
               {filteredOrders.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-slate-500 font-sans">
+                  <td colSpan={10} className="py-8 text-center text-slate-400 font-sans">
                     Tidak ditemukan data transaksi penjualan / surat jalan.
                   </td>
                 </tr>
@@ -483,51 +483,51 @@ function SalesFormModal({ item, preselectedLotNo, availableLots = [], customers 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-2xl w-full my-6 overflow-hidden text-xs">
-        <div className="flex justify-between items-center px-4 py-3 border-b border-slate-800 bg-slate-950/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/40 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl max-w-2xl w-full my-6 overflow-hidden text-xs text-slate-800">
+        <div className="flex justify-between items-center px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center space-x-2">
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-bold text-white text-sm">
+            <TrendingUp className="w-4 h-4 text-violet-600" />
+            <h3 className="font-bold text-slate-800 text-sm">
               {item ? `Koreksi Penjualan: ${formData.orderNo}` : 'Input Surat Jalan (DO) & Penjualan Biji Pelet'}
             </h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-3.5 font-sans">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3.5 font-sans">
           {/* Header row: DO No, Invoice No, Tanggal */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-slate-400 text-2xs mb-1">No. DO / Surat Jalan *</label>
+              <label className="block text-slate-500 text-2xs mb-1 font-semibold">No. DO / Surat Jalan *</label>
               <input
                 required
                 type="text"
                 value={formData.orderNo}
                 onChange={e => setFormData({ ...formData, orderNo: e.target.value.toUpperCase() })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono uppercase text-xs focus:outline-hidden focus:border-purple-500 font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-800 font-mono uppercase text-xs focus:bg-white focus:border-violet-500 font-bold"
               />
             </div>
 
             <div>
-              <label className="block text-slate-400 text-2xs mb-1">No. Faktur / Invoice *</label>
+              <label className="block text-slate-500 text-2xs mb-1 font-semibold">No. Faktur / Invoice *</label>
               <input
                 required
                 type="text"
                 value={formData.invoiceNo}
                 onChange={e => setFormData({ ...formData, invoiceNo: e.target.value.toUpperCase() })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-emerald-400 font-mono uppercase text-xs focus:outline-hidden focus:border-emerald-500 font-semibold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-emerald-700 font-mono uppercase text-xs focus:bg-white focus:border-violet-500 font-bold"
               />
             </div>
 
             <div>
-              <label className="block text-slate-400 text-2xs mb-1">Tanggal Kirim *</label>
+              <label className="block text-slate-500 text-2xs mb-1 font-semibold">Tanggal Kirim *</label>
               <input
                 required
                 type="date"
                 value={formData.date}
                 onChange={e => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-800 text-xs focus:bg-white focus:border-violet-500"
               />
             </div>
           </div>
@@ -535,12 +535,12 @@ function SalesFormModal({ item, preselectedLotNo, availableLots = [], customers 
           {/* Customer & Lot Picker */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 text-2xs mb-1">Customer / Pabrik Pembeli *</label>
+              <label className="block text-slate-500 text-2xs mb-1 font-semibold">Customer / Pabrik Pembeli *</label>
               <select
                 required
                 value={formData.customerId}
                 onChange={e => setFormData({ ...formData, customerId: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-emerald-500 font-medium"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-800 text-xs focus:bg-white focus:border-violet-500 font-medium"
               >
                 <option value="">-- Pilih Customer --</option>
                 {customers.map(c => (
@@ -553,9 +553,9 @@ function SalesFormModal({ item, preselectedLotNo, availableLots = [], customers 
 
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label className="text-slate-400 text-2xs">Pilih Lot Biji Pelet dari Gudang *</label>
+                <label className="text-slate-500 text-2xs font-semibold">Pilih Lot Biji Pelet dari Gudang *</label>
                 {matchedLot && (
-                  <span className="text-2xs text-purple-400 font-mono">
+                  <span className="text-3xs text-violet-600 font-mono font-medium">
                     Sisa: {formatWeight(availableStock)}
                   </span>
                 )}
@@ -564,12 +564,12 @@ function SalesFormModal({ item, preselectedLotNo, availableLots = [], customers 
                 required
                 value={formData.targetLotNo}
                 onChange={e => setFormData({ ...formData, targetLotNo: e.target.value })}
-                className="w-full bg-slate-950 border border-purple-500 rounded px-2.5 py-1.5 text-purple-300 font-mono text-xs focus:outline-hidden font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-violet-700 font-mono text-xs focus:bg-white focus:border-violet-500 font-bold"
               >
                 <option value="">-- Pilih Lot Gudang Pelet --</option>
                 {selectableLots.map(l => (
                   <option key={l.lotNo} value={l.lotNo}>
-                    {l.lotNo} - {l.productName} ({l.targetColor}) | Sisa: {formatNumber(l.currentStockKg, 0)} Kg @ HPP {formatRupiah(l.hppFinalPelletPerKg)}
+                    {l.lotNo} - {l.productName} ({l.targetColor}) | Sisa: {formatNumber(l.currentStockKg, 0)} Kg
                   </option>
                 ))}
               </select>
@@ -577,14 +577,14 @@ function SalesFormModal({ item, preselectedLotNo, availableLots = [], customers 
           </div>
 
           {/* Quantity & Pricing */}
-          <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2.5 font-mono">
-            <span className="text-2xs font-bold text-slate-300 uppercase tracking-wider block font-sans">
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2.5 font-mono">
+            <span className="text-3xs font-bold text-slate-400 uppercase tracking-wider block font-sans">
               Rincian Timbangan Kirim & Harga Jual
             </span>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label className="block text-slate-400 font-sans text-2xs mb-1">Qty Kirim (Kg) *</label>
+                <label className="block text-slate-500 font-sans text-3xs mb-1 font-semibold">Qty Kirim (Kg) *</label>
                 <input
                   required
                   type="number"
@@ -592,20 +592,20 @@ function SalesFormModal({ item, preselectedLotNo, availableLots = [], customers 
                   step="0.1"
                   value={formData.qtyKg}
                   onChange={e => setFormData({ ...formData, qtyKg: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white font-bold text-right text-xs focus:outline-hidden"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 font-bold text-right text-xs"
                 />
-                <span className="text-2xs text-amber-400 font-sans block text-right mt-0.5">
+                <span className="text-3xs text-slate-500 font-sans block text-right mt-0.5">
                   = {bagCount} Sak (@ 25 Kg)
                 </span>
                 {isStockExceeded && (
-                  <span className="text-2xs text-rose-400 font-sans font-bold block mt-0.5">
+                  <span className="text-3xs text-rose-500 font-sans font-bold block mt-0.5">
                     ⚠️ Melebihi stok gudang!
                   </span>
                 )}
               </div>
 
               <div>
-                <label className="block text-slate-400 font-sans text-2xs mb-1">Harga Jual / Kg *</label>
+                <label className="block text-slate-500 font-sans text-3xs mb-1 font-semibold">Harga Jual / Kg *</label>
                 <input
                   required
                   type="number"
@@ -613,63 +613,62 @@ function SalesFormModal({ item, preselectedLotNo, availableLots = [], customers 
                   step="50"
                   value={formData.pricePerKg}
                   onChange={e => setFormData({ ...formData, pricePerKg: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-emerald-400 font-bold text-right text-xs focus:outline-hidden"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-emerald-600 font-bold text-right text-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-sans text-2xs mb-1">Diskon Total (Rp)</label>
+                <label className="block text-slate-500 font-sans text-3xs mb-1 font-semibold">Diskon Total (Rp)</label>
                 <input
                   type="number"
                   min="0"
                   value={formData.discount}
                   onChange={e => setFormData({ ...formData, discount: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white text-right text-xs focus:outline-hidden"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 text-right text-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-sans text-2xs mb-1">Ongkir Ekspedisi (Rp)</label>
+                <label className="block text-slate-500 font-sans text-3xs mb-1 font-semibold">Ongkir Ekspedisi (Rp)</label>
                 <input
                   type="number"
                   min="0"
                   value={formData.shippingCost}
                   onChange={e => setFormData({ ...formData, shippingCost: e.target.value })}
-                  className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white text-right text-xs focus:outline-hidden"
+                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 text-right text-xs"
                 />
               </div>
             </div>
 
             {/* Profit Margin Preview Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-800 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-200 text-xs">
               <div>
-                <span className="text-2xs text-slate-400 block font-sans">Total Omset Net:</span>
-                <span className="font-bold text-white text-sm">{formatRupiah(netRevenue)}</span>
+                <span className="text-3xs text-slate-400 block font-sans">Total Omset Net:</span>
+                <span className="font-bold text-slate-800 text-sm">{formatRupiah(netRevenue)}</span>
               </div>
               <div>
-                <span className="text-2xs text-slate-400 block font-sans">Beban Pokok (HPP):</span>
-                <span className="font-bold text-amber-400">{formatRupiah(totalCogs)}</span>
-                <span className="text-2xs text-slate-500 block">@ {formatRupiah(liveHppPerKg)}/Kg</span>
+                <span className="text-3xs text-slate-400 block font-sans">Beban Pokok (HPP):</span>
+                <span className="font-bold text-slate-600">{formatRupiah(totalCogs)}</span>
               </div>
               <div>
-                <span className="text-2xs text-slate-400 block font-sans font-bold text-emerald-400">Laba Kotor (Profit):</span>
-                <span className="font-bold text-emerald-400 text-sm">{formatRupiah(grossProfit)}</span>
+                <span className="text-3xs text-slate-400 block font-sans font-semibold text-violet-700">Laba Kotor:</span>
+                <span className="font-bold text-violet-700 text-sm">{formatRupiah(grossProfit)}</span>
               </div>
-              <div className="border-l border-slate-800 pl-2">
-                <span className="text-2xs text-purple-400 block font-sans font-bold">Margin Keuntungan:</span>
-                <span className="font-black text-purple-400 text-sm">{formatPercent(marginPercent)}</span>
+              <div className="border-l border-slate-200 pl-2">
+                <span className="text-3xs text-violet-600 block font-sans font-semibold">Margin Keuntungan:</span>
+                <span className="font-black text-violet-700 text-sm">{formatPercent(marginPercent)}</span>
               </div>
             </div>
           </div>
 
           {/* Payment Terms & Piutang */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-950 rounded-lg border border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80">
             <div>
-              <label className="block text-slate-400 text-2xs mb-1">Status Pembayaran Customer</label>
+              <label className="block text-slate-500 text-2xs mb-1 font-semibold">Status Pembayaran Customer</label>
               <select
                 value={formData.paymentStatus}
                 onChange={e => setFormData({ ...formData, paymentStatus: e.target.value })}
-                className="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 text-xs focus:border-violet-500"
               >
                 <option value="Lunas">Lunas (Tunai / Transfer Full)</option>
                 <option value="DP">DP (Uang Muka Sebagian)</option>
@@ -679,12 +678,12 @@ function SalesFormModal({ item, preselectedLotNo, availableLots = [], customers 
 
             {formData.paymentStatus === 'DP' && (
               <div>
-                <label className="block text-amber-400 text-2xs mb-1 font-semibold">Nominal DP Diterima (Rp) *</label>
+                <label className="block text-amber-600 text-2xs mb-1 font-semibold">Nominal DP Diterima (Rp) *</label>
                 <input
                   type="number"
                   value={formData.paidAmount}
                   onChange={e => setFormData({ ...formData, paidAmount: e.target.value })}
-                  className="w-full bg-slate-900 border border-amber-500 rounded px-2.5 py-1.5 text-amber-300 font-mono text-xs focus:outline-hidden"
+                  className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-slate-800 font-mono text-xs"
                 />
               </div>
             )}
@@ -693,50 +692,50 @@ function SalesFormModal({ item, preselectedLotNo, availableLots = [], customers 
           {/* Delivery & Logistics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-400 text-2xs mb-1">Plat Nomor Truk / Armada</label>
+              <label className="block text-slate-500 text-2xs mb-1 font-semibold">Plat Nomor Truk / Armada</label>
               <input
                 type="text"
                 value={formData.truckPlate}
                 onChange={e => setFormData({ ...formData, truckPlate: e.target.value.toUpperCase() })}
                 placeholder="Misal: B 9123 XYZ"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono uppercase text-xs focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-800 font-mono uppercase text-xs focus:bg-white focus:border-violet-500"
               />
             </div>
 
             <div>
-              <label className="block text-slate-400 text-2xs mb-1">Nama Pengemudi / Sopir</label>
+              <label className="block text-slate-500 text-2xs mb-1 font-semibold">Nama Pengemudi / Sopir</label>
               <input
                 type="text"
                 value={formData.driverName}
                 onChange={e => setFormData({ ...formData, driverName: e.target.value })}
                 placeholder="Misal: Pak Bambang (Ekspedisi)"
-                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-emerald-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-800 text-xs focus:bg-white focus:border-violet-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-400 text-2xs mb-1">Catatan Pengiriman / Spesifikasi Khusus</label>
+            <label className="block text-slate-500 text-2xs mb-1 font-semibold">Catatan Pengiriman / Faktur</label>
             <input
               type="text"
               value={formData.notes}
               onChange={e => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Catatan tambahan spesifikasi atau instruksi bongkar"
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-800 text-xs focus:bg-white focus:border-violet-500"
             />
           </div>
 
-          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-xs"
+              className="px-4 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold shadow-xs"
             >
               Simpan Surat Jalan & Penjualan
             </button>
@@ -767,58 +766,58 @@ function PelunasanCustomerModal({ item, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/80 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-w-md w-full overflow-hidden text-xs">
-        <div className="flex justify-between items-center px-4 py-3 border-b border-slate-800 bg-slate-950/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/40 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden text-xs text-slate-800">
+        <div className="flex justify-between items-center px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center space-x-2">
-            <CreditCard className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-bold text-white text-sm">Pelunasan Piutang Customer</h3>
+            <CreditCard className="w-4 h-4 text-emerald-600" />
+            <h3 className="font-bold text-slate-800 text-sm">Pelunasan Piutang Customer</h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="w-4 h-4" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-3 font-sans">
-          <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-1.5">
+        <form onSubmit={handleSubmit} className="p-5 space-y-3 font-sans">
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5">
             <div className="flex justify-between">
-              <span className="text-slate-400 text-2xs">No. DO & Faktur:</span>
-              <span className="font-mono font-bold text-white">{item.orderNo || item.doNo}</span>
+              <span className="text-slate-500 text-3xs font-semibold">No. DO & Faktur:</span>
+              <span className="font-mono font-bold text-slate-800">{item.orderNo || item.doNo}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400 text-2xs">Customer:</span>
-              <span className="font-semibold text-emerald-400">{item.customerName}</span>
+              <span className="text-slate-500 text-3xs font-semibold">Customer:</span>
+              <span className="font-bold text-slate-800">{item.customerName}</span>
             </div>
-            <div className="flex justify-between border-t border-slate-800 pt-1.5">
-              <span className="text-slate-400 text-2xs">Total Tagihan:</span>
-              <span className="font-mono text-white">{formatRupiah(totalBill)}</span>
+            <div className="flex justify-between border-t border-slate-200 pt-1.5">
+              <span className="text-slate-500 text-3xs">Total Tagihan:</span>
+              <span className="font-mono font-bold text-slate-800">{formatRupiah(totalBill)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400 text-2xs">Sudah Dibayar:</span>
-              <span className="font-mono text-emerald-400">{formatRupiah(currentPaid)}</span>
+              <span className="text-slate-500 text-3xs">Sudah Dibayar:</span>
+              <span className="font-mono font-bold text-emerald-600">{formatRupiah(currentPaid)}</span>
             </div>
             <div className="flex justify-between font-bold">
-              <span className="text-rose-400 text-2xs">Sisa Piutang:</span>
-              <span className="font-mono text-rose-400 text-sm">{formatRupiah(remaining)}</span>
+              <span className="text-rose-600 text-3xs">Sisa Piutang:</span>
+              <span className="font-mono text-rose-600 text-sm">{formatRupiah(remaining)}</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-slate-400 text-2xs mb-1">Tanggal Pembayaran *</label>
+            <label className="block text-slate-500 text-2xs mb-1 font-semibold">Tanggal Pembayaran *</label>
             <input
               required
               type="date"
               value={paymentDate}
               onChange={e => setPaymentDate(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden focus:border-emerald-500"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-800 text-xs focus:bg-white focus:border-violet-500"
             />
           </div>
 
           <div>
             <div className="flex justify-between items-center mb-1">
-              <label className="text-slate-400 text-2xs">Nominal Bayar / Pelunasan (Rp) *</label>
+              <label className="text-slate-500 text-2xs font-semibold">Nominal Bayar / Pelunasan (Rp) *</label>
               <button
                 type="button"
                 onClick={() => setPaymentAmount(remaining)}
-                className="text-2xs text-emerald-400 hover:underline font-semibold"
+                className="text-3xs text-violet-600 hover:text-violet-700 font-bold"
               >
                 Bayar Penuh ({formatRupiah(remaining)})
               </button>
@@ -830,24 +829,24 @@ function PelunasanCustomerModal({ item, onSave, onClose }) {
               max={remaining}
               value={paymentAmount}
               onChange={e => setPaymentAmount(e.target.value)}
-              className="w-full bg-slate-950 border border-emerald-500 rounded px-2.5 py-1.5 text-emerald-400 font-mono font-bold text-sm focus:outline-hidden"
+              className="w-full bg-slate-50 border border-emerald-300 rounded-xl px-2.5 py-1.5 text-emerald-700 font-mono font-black text-sm focus:bg-white"
             />
           </div>
 
           <div>
-            <label className="block text-slate-400 text-2xs mb-1">Metode & Catatan Pembayaran</label>
+            <label className="block text-slate-500 text-2xs mb-1 font-semibold">Metode & Catatan Pembayaran</label>
             <input
               type="text"
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Misal: Transfer BCA Rekening Pabrik / Cek Giro"
-              className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs focus:outline-hidden"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-800 text-xs focus:bg-white focus:border-violet-500"
             />
           </div>
 
-          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">Batal</button>
-            <button type="submit" className="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold">Simpan Pembayaran</button>
+          <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+            <button type="button" onClick={onClose} className="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-600 font-semibold">Batal</button>
+            <button type="submit" className="px-4 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold">Simpan Pembayaran</button>
           </div>
         </form>
       </div>

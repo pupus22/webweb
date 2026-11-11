@@ -347,9 +347,15 @@ export function recalculateERP(database) {
   const totalWasteStage1 = recalibratedPreProcessings.reduce((acc, p) => acc + p.wasteSortirKg, 0);
   const avgSusutStage1 = totalRawInputStage1 > 0 ? (totalWasteStage1 / totalRawInputStage1) * 100 : 0;
 
-  const totalInputStage2 = recalibratedProductionSPKs.reduce((acc, spk) => acc + spk.totalInputMixKg, 0);
-  const totalWasteStage2 = recalibratedProductionSPKs.reduce((acc, spk) => acc + spk.wasteExtrusionKg, 0);
+  // Accurate Stage 2 Shrinkage calculated ONLY from completed weighed SPKs
+  const completedSPKs = recalibratedProductionSPKs.filter(spk => spk.status === 'Selesai' && Number(spk.outputPelletKg || 0) > 0);
+  const totalInputStage2 = completedSPKs.reduce((acc, spk) => acc + spk.totalInputMixKg, 0);
+  const totalWasteStage2 = completedSPKs.reduce((acc, spk) => acc + spk.wasteExtrusionKg, 0);
   const avgSusutStage2 = totalInputStage2 > 0 ? (totalWasteStage2 / totalInputStage2) * 100 : 0;
+
+  // SPK counts
+  const activeSPKCount = recalibratedProductionSPKs.filter(spk => spk.status === 'Dalam Proses').length;
+  const completedSPKCount = completedSPKs.length;
 
   // Sales & Profit
   const totalRevenue = recalibratedSalesOrders.reduce((acc, so) => acc + so.netRevenue, 0);
@@ -387,6 +393,8 @@ export function recalculateERP(database) {
       totalRevenue,
       totalGrossProfit,
       avgProfitMargin,
+      activeSPKCount,
+      completedSPKCount,
       totalSalesCount: recalibratedSalesOrders.length,
       totalProductionCount: recalibratedProductionSPKs.length
     }
